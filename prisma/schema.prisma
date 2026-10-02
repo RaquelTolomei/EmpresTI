@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  COLLABORATOR
+  OPERATIONS
+}
+
+enum EquipmentCategory {
+  NOTEBOOK
+  MONITOR
+  CAMERA
+  CABLE
+  DOCK
+  PROJECTOR
+  ACCESSORY
+}
+
+enum EquipmentStatus {
+  AVAILABLE
+  LOANED
+  MAINTENANCE
+  OUT_OF_SERVICE
+}
+
+enum LoanStatus {
+  OPEN
+  CLOSED
+}
+
+enum AuditAction {
+  EQUIPMENT_CREATED
+  EQUIPMENT_UPDATED
+  EQUIPMENT_STATUS_CHANGED
+  LOAN_CREATED
+  LOAN_RETURNED
+  LOAN_REJECTED
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  memberships Membership[]
+  equipment   Equipment[]
+  loans       Loan[]
+  auditEvents AuditEvent[]
+
+  @@map("tenants")
+}
+
+model Membership {
+  id        String   @id @default(cuid())
+  tenantId  String   @map("tenant_id")
+  userId    String   @map("user_id")
+  role      Role     @default(COLLABORATOR)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId])
+  @@index([tenantId, role])
+  @@map("memberships")
+}
+
+model Equipment {
+  id              String            @id @default(cuid())
+  tenantId        String            @map("tenant_id")
+  name            String
+  category        EquipmentCategory
+  patrimonyCode   String            @map("patrimony_code")
+  serialNumber    String?           @map("serial_number")
+  location        String?
+  status          EquipmentStatus   @default(AVAILABLE)
+  notes           String?           @db.Text
+  availableAt     DateTime?         @map("available_at")
+  lastReturnedAt  DateTime?         @map("last_returned_at")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  loans       Loan[]
+  auditEvents AuditEvent[]
+
+  @@unique([tenantId, patrimonyCode])
+  @@unique([tenantId, serialNumber])
+  @@index([tenantId, status])
+  @@index([tenantId, category])
+  @@index([tenantId, location])
+  @@map("equipment")
+}
+
+model Loan {
+  id              String    @id @default(cuid())
+  tenantId        String    @map("tenant_id")
+  equipmentId     String    @map("equipment_id")
+  userId          String    @map("user_id")
+  status          LoanStatus @default(OPEN)
+  borrowedAt      DateTime  @default(now()) @map("borrowed_at")
+  dueAt           DateTime  @map("due_at")
+  returnedAt      DateTime? @map("returned_at")
+  returnedByUserId String?  @map("returned_by_user_id")
+  notes           String?   @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, userId])
+  @@index([tenantId, dueAt])
+  @@index([tenantId, status])
+  @@index([tenantId, equipmentId])
+  @@map("loans")
+}
+
+model AuditEvent {
+  id          String      @id @default(cuid())
+  tenantId    String      @map("tenant_id")
+  actorId     String?     @map("actor_id")
+  action      AuditAction
+  resourceType String     @map("resource_type")
+  resourceId  String     @map("resource_id")
+  details     Json?       @db.JsonB
+  equipmentId String?     @map("equipment_id")
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  equipment Equipment? @relation(fields: [equipmentId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, action])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, resourceType, resourceId])
+  @@map("audit_events")
+}
