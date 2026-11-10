@@ -64,6 +64,7 @@ Cada registro representa uma unidade física e contém, no mínimo:
 - Nome
 - Categoria
 - Patrimônio
+- Caminho da imagem do equipamento
 - Número de série
 - Local de retirada
 - Situação inicial
@@ -159,6 +160,7 @@ As telas devem seguir a especificação visual de `layout.md`, incluindo somente
 - **CA-08 — Isolamento:** nenhum procedimento retorna ou altera dados de outro tenant; colaborador não acessa operações.
 - **CA-09 — Interface:** as seis telas e fluxos seguem `layout.md` e contemplam sucesso, erro, carregamento, vazio e permissões.
 - **CA-10 — Repetibilidade:** migrations aplicam em banco local recém-resetado e seed pode ser executado repetidamente sem duplicar dados.
+- **CA-11 — Carga inicial:** o seed local cria exatamente os 12 equipamentos da lista da prática, com patrimônio único, nome, categoria, situação e imagem; somente TI-0004 e TI-0007 ficam em manutenção, os demais ficam disponíveis e nenhum empréstimo é criado.
 
 ## Erros esperados
 
@@ -175,9 +177,15 @@ A API deve expor erros tipados para:
 - Conflito de solicitação concorrente.
 - Dados inválidos de cadastro.
 
-## Dados de demonstração
+## Carga inicial de equipamentos
 
-O seed local deve ser idempotente e criar o tenant `suporte_ti`, memberships de colaborador e Operações, além de equipamentos e empréstimos que permitam visualizar os estados disponível, emprestado, manutenção e atraso. O seed não pode depender do Supabase remoto nem importar a planilha.
+O carregamento inicial deve ser idempotente e criar ou reutilizar o tenant `suporte_ti` e os 12 equipamentos TI-0001 a TI-0012 descritos no manifesto `public/equipment-images/manifest.json`, com quatro notebooks, três monitores, três cabos e duas câmeras. Cada equipamento deve persistir em `imagePath` a chave do objeto relativa ao bucket público `imagem-equipamento`: `img/TI-XXXX.webp`.
+
+TI-0004, TI-0007 e TI-0010 começam com `MAINTENANCE`; os outros nove começam com `AVAILABLE`. Esta carga não cria empréstimos, memberships ou usuários. O provisionamento da conta usada para autenticação é separado e está fora desta tarefa. Se um patrimônio já existir no tenant, a carga atualiza nome, categoria, situação e caminho de imagem sem duplicá-lo.
+
+As imagens devem ser únicas, ter créditos preservados no manifesto e dimensões finais exatas de 800x600. Arquivos baixados devem ser redimensionados após o download com a biblioteca `sharp`, sem distorção, seguindo a skill `skills/imagens-equipamentos/SKILL.md`. Os arquivos locais usam nomes `TI-XXXX.webp` para corresponder às chaves `img/TI-XXXX.webp` a serem enviadas posteriormente ao bucket público `imagem-equipamento`.
+
+O seed e o processamento das imagens desta tarefa operam somente sobre o banco local e arquivos locais; não acessam nem alteram o Supabase remoto ou produção.
 
 ## Testes obrigatórios
 

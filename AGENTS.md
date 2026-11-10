@@ -1,4 +1,4 @@
-﻿# EmpresTI
+# EmpresTI
 
 Sistema que substitui a planilha de controle de empréstimo de equipamentos internos (notebooks, monitores, cabos, câmeras). Atende dois perfis: Colaborador — que consulta o catálogo, solicita itens e registra devolução — e Operações — que cadastra equipamentos e acompanha todos os empréstimos em aberto.
 
@@ -10,9 +10,9 @@ Negócio em `docs/PRD.md`. Stack decidida em `docs/adr/001-stack.md`.
 
 - `docs/PRD.md` — problema, quem usa, escopo e regras de negócio da v1. Não é spec técnica.
 - `docs/adr/` — decisões de arquitetura e stack já tomadas, com justificativa.
-- `docs/specs/<NNN-funcionalidade>/` — spec, plano e tarefas de cada feature (ainda não existe).
+- `docs/specs/<NNN-funcionalidade>/` — spec, plano e tarefas de cada feature.
 - `layout.md` — especificação visual completa: cores, tipografia, espaçamento, componentes e as seis telas da v1. Design system Nocturne, somente modo escuro.
-- `rules/` — como se trabalha aqui. Leia `rules/restrictions.md` sempre (ainda não existe).
+- `rules/` — como se trabalha aqui. Leia `rules/restrictions.md` sempre.
 
 ---
 
@@ -28,7 +28,7 @@ Checks adicionais: `npm run lint`, `npm run typecheck` e `npm run format:check`.
 
 ## Ambiente
 
-- Banco: Supabase (nuvem). O desenvolvimento acontece no projeto Supabase remoto.
+- Banco: PostgreSQL local / Testcontainers para desenvolvimento e testes de integração; Supabase para infraestrutura de nuvem e autenticação.
 - Deploy: Vercel, ligada ao repositório remoto. Push na branch principal publica.
 - Variáveis de ambiente: ver `.env.example`. Nunca use prefixo `NEXT_PUBLIC_` para segredos; a `service_role` key do Supabase só pode aparecer em código de servidor.
 
@@ -72,9 +72,22 @@ Se algo não estiver escrito em lugar nenhum, pergunte — não decida.
 
 ---
 
-## Procedimentos
+## Skills
 
-_(vazio por enquanto)_
+- Ficam em skills/<nome>/SKILL.md.
+- No início de cada tarefa, leia só o frontmatter (name e description) de cada skill. Carregue o corpo do SKILL.md apenas quando a tarefa casar com a description; abra references/ só quando o SKILL.md mandar.
+- Em conflito, rules/ e docs/adr/ vencem qualquer skill.
+
+---
+
+## Subagentes
+
+- Ficam em agents/<nome>.md. O frontmatter diz quando delegar; o
+  corpo é a instrução completa do subagente.
+- Subagente não herda esta conversa: ao delegar, passe tudo que o
+  arquivo dele pede como entrada.
+- Se o harness não tiver subagentes, abra uma sessão nova e comece
+  com: "Aja conforme agents/<nome>.md." e as entradas pedidas.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

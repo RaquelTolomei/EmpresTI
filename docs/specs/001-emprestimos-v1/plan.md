@@ -75,7 +75,7 @@ A estrutura só será criada no scaffold após a conclusão e aprovação deste 
 
 - `Tenant`: identificador e slug.
 - `Membership`: vínculo usuário–tenant, com papel `COLLABORATOR` ou `OPERATIONS`.
-- `Equipment`: unidade física, dados cadastrais, situação persistida e tenant.
+- `Equipment`: unidade física, dados cadastrais, caminho de imagem, situação persistida e tenant.
 - `Loan`: equipamento, usuário, tenant, retirada, prazo, devolução e responsável pela devolução.
 - `AuditEvent`: evento append-only com ator, tenant, ação e recurso, conforme ADR.
 
@@ -156,7 +156,7 @@ Estados de loading, erro, vazio, conflito, permissão insuficiente e sucesso ser
 
 - Service tests para CA-03, CA-04, CA-05, CA-06 e CA-07.
 - Testes de procedimentos via `createCaller`, incluindo CA-01, CA-02 e CA-08.
-- Integração com PostgreSQL local/Testcontainers para constraints, transações e seed, cobrindo CA-04 e CA-10.
+- Integração com PostgreSQL local/Testcontainers para constraints, transações e seed, cobrindo CA-04, CA-10 e CA-11.
 - Testes de componentes para CA-01, CA-02, CA-04, CA-05, CA-06, CA-07 e CA-09.
 - E2E Playwright para os fluxos completos de CA-01, CA-03, CA-05, CA-06 e CA-07.
 - Todos os testes de acesso citam o critério e comprovam que tenant A não acessa tenant B.
@@ -167,7 +167,7 @@ Estados de loading, erro, vazio, conflito, permissão insuficiente e sucesso ser
 1. Derivar `tasks.md` e aprovar a sequência.
 2. Apresentar o scaffold e inicializar a fundação do projeto.
 3. Configurar ambiente, Prisma singleton, contexto e autenticação.
-4. Criar schema, migration, constraints e seed local.
+4. Criar schema, migration, constraints e seed local dos 12 equipamentos, sem empréstimos ou usuários.
 5. Implementar services e testes das regras de negócio.
 6. Implementar routers tRPC e testes de procedimentos.
 7. Implementar shell, login e catálogo.

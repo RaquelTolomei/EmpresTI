@@ -18,8 +18,8 @@ Cada tarefa abaixo deve ser executada isoladamente, caber em um commit e termina
 
 ## T3 — Schema inicial e migration
 
-- **Escopo:** criar `Tenant`, `Membership`, `Equipment`, `Loan` e `AuditEvent`; adicionar enums, relações, `tenant_id`, índices, unicidades e constraint de empréstimo aberto.
-- **CA:** CA-02, CA-03, CA-04, CA-05, CA-07, CA-08, CA-10.
+- **Escopo:** criar `Tenant`, `Membership`, `Equipment`, `Loan` e `AuditEvent`; adicionar enums, relações, `tenant_id`, `Equipment.imagePath` opcional, índices, unicidades e constraint de empréstimo aberto.
+- **CA:** CA-02, CA-03, CA-04, CA-05, CA-07, CA-08, CA-10, CA-11.
 - **Dependências:** T2.
 - **Check:** migration aplicada em PostgreSQL local recém-resetado e schema Prisma formatado/validado.
 
@@ -30,12 +30,12 @@ Cada tarefa abaixo deve ser executada isoladamente, caber em um commit e termina
 - **Dependências:** T2, T3.
 - **Check:** testes de contexto para sessão ausente, tenant ausente, colaborador e Operações.
 
-## T5 — Seed local idempotente
+## T5 — Seed local idempotente de equipamentos
 
-- **Escopo:** criar `prisma/seed.ts` com tenant `suporte_ti`, memberships e dados de demonstração para disponível, emprestado, manutenção, fora de uso e atraso.
-- **CA:** CA-02, CA-07, CA-10.
-- **Dependências:** T3, T4.
-- **Check:** executar seed duas vezes e confirmar ausência de duplicação no banco local.
+- **Escopo:** criar `prisma/seed.ts` idempotente para criar/reutilizar o tenant `suporte_ti` e inserir/atualizar exatamente os 12 patrimônios TI-0001 a TI-0012 do manifesto `public/equipment-images/manifest.json`; persistir em `imagePath` as chaves `img/TI-XXXX.webp` do bucket público `imagem-equipamento`; atribuir `MAINTENANCE` a TI-0004, TI-0007 e TI-0010, e `AVAILABLE` aos demais. Não criar empréstimos, memberships ou usuários. Manter créditos e nomes dos arquivos alinhados no manifesto.
+- **CA:** CA-02, CA-10, CA-11.
+- **Dependências:** T3.
+- **Check:** executar o seed duas vezes no banco local e confirmar ausência de duplicação, zero empréstimos/memberships, situações conforme a spec e caminhos de imagem; verificar que o manifesto corresponde aos nomes dos arquivos e que todos são únicos e 800x600. Não acessar banco ou serviços remotos.
 
 ## T6 — Service de catálogo e equipamentos
 
@@ -117,7 +117,7 @@ Cada tarefa abaixo deve ser executada isoladamente, caber em um commit e termina
 ## T17 — Integração, segurança e auditoria
 
 - **Escopo:** consolidar testes de integração com Postgres/Testcontainers para transações, constraints, auditoria, seed e isolamento; revisar logs estruturados e rate limit previsto no ADR.
-- **CA:** CA-04, CA-05, CA-06, CA-08, CA-10.
+- **CA:** CA-04, CA-05, CA-06, CA-08, CA-10, CA-11.
 - **Dependências:** T5, T7, T8, T9, T10.
 - **Check:** suíte de integração com banco local recém-resetado e um caso de isolamento por procedimento de acesso.
 

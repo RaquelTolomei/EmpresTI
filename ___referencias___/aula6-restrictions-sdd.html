@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aula 6 — SDD em projeto existente</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #050a14;
+  --cyan: #00e5ff;
+  --green: #00ff88;
+  --orange: #ff6b35;
+  --purple: #7c3aed;
+  --pink: #f472b6;
+  --text: #e8f4f8;
+  --muted: #7fa8c0;
+  --card: rgba(255,255,255,0.04);
+  --border: rgba(0,229,255,0.15);
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans-serif; }
+
+#bg { position:fixed; inset:0; z-index:0; opacity:.3; pointer-events:none; }
+
+#progress-bar {
+  position:fixed; top:0; left:0; height:3px; z-index:200;
+  background:linear-gradient(90deg, var(--cyan), var(--purple));
+  transition: width .4s ease;
+}
+
+#topbar {
+  position:fixed; top:0; left:0; right:0; height:52px; z-index:150;
+  background:rgba(5,10,20,.88); backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between; padding:0 32px;
+}
+.tb-label { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--cyan); letter-spacing:2px; text-transform:uppercase; }
+.tb-counter { font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--muted); }
+.tb-title { font-family:'IBM Plex Sans',sans-serif; font-size:13px; color:var(--muted); max-width:360px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+#slides { position:fixed; inset:0; z-index:1; }
+
+.slide {
+  position:absolute; inset:0;
+  display:flex; flex-direction:column; justify-content:flex-start; align-items:center;
+  padding:72px 60px 80px;
+  opacity:0; pointer-events:none;
+  transition: opacity .5s ease, transform .5s ease;
+  transform: translateX(60px);
+  overflow-y: auto;
+}
+.slide.active { opacity:1; pointer-events:all; transform:translateX(0); }
+.slide.prev   { opacity:0; pointer-events:none; transform:translateX(-60px); }
+.slide-inner { width:100%; max-width:1060px; margin:auto 0; }
+
+#nav-prev, #nav-next {
+  position:fixed; top:50%; z-index:200;
+  transform:translateY(-50%);
+  width:48px; height:48px; border-radius:50%;
+  border:1px solid var(--border); background:rgba(5,10,20,.7);
+  backdrop-filter:blur(8px); cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-size:20px; color:var(--cyan);
+  transition:all .2s; user-select:none;
+}
+#nav-prev { left:16px; }
+#nav-next { right:16px; }
+#nav-prev:hover, #nav-next:hover { background:rgba(0,229,255,.12); border-color:var(--cyan); }
+#nav-prev.disabled, #nav-next.disabled { opacity:.25; pointer-events:none; }
+
+#dots { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); display:flex; gap:7px; z-index:200; }
+.dot { width:7px; height:7px; border-radius:50%; background:var(--muted); opacity:.4; cursor:pointer; transition:all .3s; }
+.dot.active { background:var(--cyan); opacity:1; transform:scale(1.3); }
+
+.tag  { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--cyan);   letter-spacing:3px; text-transform:uppercase; margin-bottom:10px; display:block; }
+.gtag { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--green);  letter-spacing:3px; text-transform:uppercase; margin-bottom:10px; display:block; }
+.ptag { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--purple); letter-spacing:3px; text-transform:uppercase; margin-bottom:10px; display:block; }
+.otag { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--orange); letter-spacing:3px; text-transform:uppercase; margin-bottom:10px; display:block; }
+
+h1.hero-title { font-family:'Syne',sans-serif; font-size:clamp(2.2rem,4.6vw,4.2rem); font-weight:800; line-height:1.05; margin-bottom:20px; }
+h2.sec-title  { font-family:'Syne',sans-serif; font-size:clamp(1.5rem,3.3vw,2.5rem); font-weight:800; line-height:1.15; margin-bottom:12px; }
+h3.slide-h3   { font-family:'Syne',sans-serif; font-size:1.2rem; font-weight:700; margin-bottom:16px; }
+p.lead { color:var(--muted); font-size:1rem; line-height:1.7; margin-bottom:24px; }
+
+.badge {
+  display:inline-flex; align-items:center; gap:8px;
+  background:rgba(0,229,255,.08); border:1px solid var(--border);
+  border-radius:20px; padding:6px 16px;
+  font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--cyan); letter-spacing:1px;
+  margin-bottom:28px; width:fit-content;
+}
+.badge::before { content:''; width:7px; height:7px; background:var(--green); border-radius:50%; animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.5)} }
+
+.hero-q {
+  background:linear-gradient(135deg,rgba(0,229,255,.06),rgba(124,58,237,.06));
+  border:1px solid rgba(0,229,255,.2); border-left:4px solid var(--cyan);
+  border-radius:12px; padding:22px 28px; font-size:1.1rem; font-style:italic; color:var(--text);
+  max-width:740px; margin-top:8px;
+  animation:fadeUp .8s ease both .3s;
+}
+@keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+
+.card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:24px; }
+.g2 { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+.g3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+@media(max-width:680px){.g2,.g3{grid-template-columns:1fr}}
+
+.pill-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:24px; }
+.pill { background:rgba(0,255,136,.07); border:1px solid rgba(0,255,136,.25); border-radius:20px; padding:5px 14px; font-size:12px; color:var(--green); font-family:'IBM Plex Mono',monospace; }
+
+.vs-wrap { display:grid; grid-template-columns:1fr 56px 1fr; gap:0; align-items:stretch; margin-bottom:20px; }
+@media(max-width:680px){.vs-wrap{grid-template-columns:1fr}.vs-sep{display:none}}
+.vs-col { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:20px; display:flex; flex-direction:column; gap:10px; }
+.vs-col.ml { border-color:rgba(255,107,53,.25); }
+.vs-col.rn { border-color:rgba(0,229,255,.25); }
+.vs-col-title { font-family:'Syne',sans-serif; font-weight:800; font-size:1rem; display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+.vs-sep { display:flex; align-items:center; justify-content:center; font-family:'Syne',sans-serif; font-weight:800; font-size:1.4rem; color:var(--muted); }
+.vs-item { display:flex; gap:8px; align-items:flex-start; padding:9px 12px; border-radius:8px; background:rgba(0,0,0,.25); font-size:.83rem; line-height:1.5; }
+.vs-item .vt { color:var(--muted); }
+.vs-item .vt strong { color:var(--text); display:block; margin-bottom:1px; }
+
+.bridge { background:linear-gradient(135deg,rgba(0,229,255,.05),rgba(124,58,237,.05)); border:1px solid rgba(0,229,255,.2); border-radius:14px; padding:24px 28px; }
+
+.quiz-q { font-family:'Syne',sans-serif; font-size:1.02rem; font-weight:700; margin-bottom:16px; }
+.qopts { display:flex; flex-direction:column; gap:9px; }
+.qopt { padding:13px 18px; border-radius:10px; border:1px solid var(--border); cursor:pointer; transition:all .2s; font-size:.88rem; background:transparent; color:var(--text); text-align:left; width:100%; font-family:inherit; }
+.qopt:hover { border-color:var(--cyan); background:rgba(0,229,255,.05); }
+.qopt.correct { border-color:var(--green); background:rgba(0,255,136,.07); color:var(--green); }
+.qopt.wrong   { border-color:var(--orange); background:rgba(255,107,53,.07); color:var(--orange); }
+.qfb { margin-top:12px; padding:12px 16px; border-radius:9px; font-size:.84rem; display:none; line-height:1.5; }
+.qfb.show { display:block; }
+.qfb.cfb { background:rgba(0,255,136,.07); border:1px solid rgba(0,255,136,.2); color:var(--green); }
+.qfb.wfb { background:rgba(255,107,53,.07); border:1px solid rgba(255,107,53,.2); color:var(--orange); }
+
+.slide-scroll { overflow-y:auto; max-height:calc(100vh - 140px); padding-right:8px; }
+.slide-scroll::-webkit-scrollbar { width:4px; }
+.slide-scroll::-webkit-scrollbar-thumb { background:rgba(0,229,255,.2); border-radius:2px; }
+
+.next-pills { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
+.next-pill { font-family:'IBM Plex Mono',monospace; font-size:12px; padding:8px 16px; border-radius:20px; background:rgba(124,58,237,.08); border:1px solid rgba(124,58,237,.3); color:var(--pink); }
+
+.code {
+  background:rgba(0,0,0,.42); border:1px solid var(--border); border-radius:10px;
+  padding:14px 18px; font-family:'IBM Plex Mono',monospace; font-size:.76rem;
+  line-height:1.75; overflow-x:auto; white-space:pre; color:#bfe4f2;
+}
+.code .k { color:var(--pink); }
+.code .s { color:var(--green); }
+.code .c { color:var(--muted); font-style:italic; }
+.code .h { color:var(--cyan); font-weight:500; }
+.code .o { color:var(--orange); }
+
+.tbl { width:100%; border-collapse:collapse; font-size:.84rem; }
+.tbl th { text-align:left; font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--cyan); padding:10px 14px; border-bottom:1px solid var(--border); }
+.tbl td { padding:11px 14px; border-bottom:1px solid rgba(255,255,255,.05); color:var(--muted); vertical-align:top; line-height:1.55; }
+.tbl td strong { color:var(--text); }
+.tbl tbody tr:hover td { background:rgba(0,229,255,.03); }
+
+.yn { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+@media(max-width:680px){ .yn{ grid-template-columns:1fr; } }
+.yn-col { border-radius:14px; padding:18px 20px; }
+.yn-yes { background:rgba(0,255,136,.05); border:1px solid rgba(0,255,136,.22); }
+.yn-no  { background:rgba(255,107,53,.05); border:1px solid rgba(255,107,53,.22); }
+.yn-col h4 { font-family:'Syne',sans-serif; font-size:.95rem; margin-bottom:12px; }
+.yn-col li { list-style:none; font-size:.83rem; color:var(--muted); line-height:1.55; padding:6px 0 6px 20px; position:relative; }
+.yn-yes li::before { content:'✓'; position:absolute; left:0; color:var(--green); }
+.yn-no  li::before { content:'✕'; position:absolute; left:0; color:var(--orange); }
+
+.hsec { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px 18px; margin-bottom:10px; border-left:3px solid var(--purple); }
+.hsec .hn { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--purple); letter-spacing:1.5px; margin-bottom:5px; }
+.hsec .ht { font-family:'Syne',sans-serif; font-weight:700; font-size:.92rem; margin-bottom:4px; }
+.hsec .hd { color:var(--muted); font-size:.82rem; line-height:1.55; }
+.hsec.star { border-left-color:var(--orange); background:rgba(255,107,53,.04); }
+.hsec.star .hn { color:var(--orange); }
+.hsec.ok { border-left-color:var(--green); background:rgba(0,255,136,.04); }
+.hsec.ok .hn { color:var(--green); }
+
+/* ═══ COMPONENTES — AULAS 4 e 5 ═══ */
+
+.stepnum {
+  display:inline-flex; align-items:center; gap:10px;
+  font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:2px;
+  text-transform:uppercase; color:var(--bg); background:var(--cyan);
+  border-radius:6px; padding:5px 12px; margin-bottom:12px; font-weight:600;
+}
+.stepnum.p { background:var(--purple); color:#fff; }
+.stepnum.o { background:var(--orange); color:var(--bg); }
+.stepnum.g { background:var(--green); color:var(--bg); }
+
+.filebox { border:1px solid var(--border); border-radius:12px; overflow:hidden; background:rgba(0,0,0,.42); margin-bottom:14px; }
+.filebox-head {
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  background:rgba(0,229,255,.06); border-bottom:1px solid var(--border);
+  padding:8px 14px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--cyan); letter-spacing:1px;
+}
+.filebox-head .fb-path::before { content:'▸ '; opacity:.6; }
+.copybtn {
+  font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1px; text-transform:uppercase;
+  border:1px solid var(--border); background:transparent; color:var(--muted);
+  border-radius:6px; padding:4px 10px; cursor:pointer; transition:.2s;
+}
+.copybtn:hover { border-color:var(--cyan); color:var(--cyan); }
+.copybtn.done { border-color:var(--green); color:var(--green); }
+.filebox pre {
+  padding:14px 18px; font-family:'IBM Plex Mono',monospace; font-size:.74rem;
+  line-height:1.7; overflow-x:auto; white-space:pre; color:#bfe4f2; max-height:340px; overflow-y:auto;
+}
+.filebox pre::-webkit-scrollbar { width:4px; height:4px; }
+.filebox pre::-webkit-scrollbar-thumb { background:rgba(0,229,255,.2); border-radius:2px; }
+
+.promptbox { border:1px solid rgba(124,58,237,.35); background:rgba(124,58,237,.06); border-radius:12px; overflow:hidden; margin-bottom:14px; }
+.promptbox-head {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:8px 14px; border-bottom:1px solid rgba(124,58,237,.25);
+  font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--pink);
+}
+.promptbox pre { padding:14px 18px; font-family:'IBM Plex Mono',monospace; font-size:.78rem; line-height:1.75; white-space:pre-wrap; color:var(--text); }
+
+.expected { background:rgba(0,255,136,.05); border:1px solid rgba(0,255,136,.25); border-left:3px solid var(--green); border-radius:12px; padding:14px 18px; margin-top:14px; }
+.expected .ex-h { font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--green); margin-bottom:8px; }
+.expected li { list-style:none; font-size:.83rem; color:var(--muted); line-height:1.6; padding:3px 0 3px 20px; position:relative; }
+.expected li::before { content:'→'; position:absolute; left:0; color:var(--green); }
+.expected li strong { color:var(--text); }
+
+.warnbox { background:rgba(255,107,53,.05); border:1px solid rgba(255,107,53,.25); border-left:3px solid var(--orange); border-radius:12px; padding:14px 18px; margin-top:14px; }
+.warnbox .wh { font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--orange); margin-bottom:7px; }
+.warnbox p { font-size:.83rem; color:var(--muted); line-height:1.6; }
+.warnbox p strong { color:var(--text); }
+
+.gitline { display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--green); background:rgba(0,255,136,.05); border:1px solid rgba(0,255,136,.2); border-radius:8px; padding:9px 14px; margin-top:12px; }
+.gitline::before { content:'$'; color:var(--muted); }
+
+.tri { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+@media(max-width:820px){ .tri{ grid-template-columns:1fr; } }
+.tri-col { border-radius:14px; padding:18px 20px; background:var(--card); border:1px solid var(--border); }
+.tri-col.a { border-color:rgba(255,107,53,.3); }
+.tri-col.b { border-color:rgba(0,229,255,.3); }
+.tri-col.c { border-color:rgba(0,255,136,.3); }
+.tri-col h4 { font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:1.5px; margin-bottom:10px; }
+.tri-col .tq { font-family:'Syne',sans-serif; font-weight:700; font-size:.95rem; margin-bottom:10px; color:var(--text); }
+.tri-col .td { font-size:.8rem; color:var(--muted); line-height:1.6; }
+
+.checklist { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+@media(max-width:680px){ .checklist{ grid-template-columns:1fr; } }
+.chk { display:flex; gap:10px; align-items:flex-start; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:11px 14px; font-size:.83rem; color:var(--muted); line-height:1.5; cursor:pointer; transition:.2s; user-select:none; }
+.chk:hover { border-color:var(--cyan); }
+.chk .box { flex-shrink:0; width:16px; height:16px; border:1px solid var(--muted); border-radius:4px; margin-top:2px; display:flex; align-items:center; justify-content:center; font-size:11px; color:transparent; }
+.chk.on { border-color:var(--green); background:rgba(0,255,136,.06); color:var(--text); }
+.chk.on .box { border-color:var(--green); background:var(--green); color:var(--bg); }
+.chk.on .box::before { content:'✓'; }
+
+/* ═══ MOCKUP DO SISTEMA — AULA 5 ═══ */
+
+.browser { border:1px solid var(--border); border-radius:14px; overflow:hidden; background:#0a121f; box-shadow:0 18px 50px rgba(0,0,0,.5); }
+.browser-bar { display:flex; align-items:center; gap:10px; padding:10px 14px; background:rgba(255,255,255,.04); border-bottom:1px solid var(--border); }
+.bdot { width:10px; height:10px; border-radius:50%; }
+.browser-url { flex:1; background:rgba(0,0,0,.4); border:1px solid var(--border); border-radius:7px; padding:5px 12px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); }
+.app { padding:22px 26px; }
+.app-head { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:20px; }
+.app-cli { display:flex; align-items:center; gap:12px; }
+.app-av { width:42px; height:42px; border-radius:50%; background:rgba(0,229,255,.12); border:1px solid rgba(0,229,255,.3); display:flex; align-items:center; justify-content:center; font-family:'Syne',sans-serif; font-weight:700; font-size:14px; color:var(--cyan); }
+.app-cli b { display:block; font-family:'Syne',sans-serif; font-size:1rem; }
+.app-cli span { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); }
+.app-date { display:flex; align-items:center; gap:8px; }
+.app-date label { font-size:12px; color:var(--muted); }
+.app-date .fake-input { background:rgba(0,0,0,.4); border:1px solid rgba(0,229,255,.3); border-radius:7px; padding:6px 12px; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--cyan); }
+.app-metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px; }
+@media(max-width:680px){ .app-metrics{ grid-template-columns:1fr; } }
+.metric { background:rgba(255,255,255,.03); border:1px solid var(--border); border-radius:10px; padding:14px 16px; }
+.metric .ml { font-size:11px; color:var(--muted); font-family:'IBM Plex Mono',monospace; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px; }
+.metric .mv { font-family:'Syne',sans-serif; font-size:1.7rem; font-weight:800; }
+.metric.g { border-color:rgba(0,255,136,.28); } .metric.g .mv { color:var(--green); }
+.metric.o { border-color:rgba(255,107,53,.28); } .metric.o .mv { color:var(--orange); }
+.metric.c { border-color:rgba(0,229,255,.28); } .metric.c .mv { color:var(--cyan); }
+.lote-label { font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+.lote { display:grid; grid-template-columns:1.3fr .8fr 1.2fr auto; gap:12px; align-items:center; padding:11px 4px; border-bottom:1px solid rgba(255,255,255,.06); font-size:.82rem; color:var(--muted); }
+@media(max-width:680px){ .lote{ grid-template-columns:1fr 1fr; } }
+.lote b { color:var(--text); font-weight:500; }
+.st { font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1px; text-transform:uppercase; padding:4px 10px; border-radius:20px; justify-self:end; }
+.st-ok  { background:rgba(0,255,136,.1); border:1px solid rgba(0,255,136,.3); color:var(--green); }
+.st-warn{ background:rgba(255,107,53,.1); border:1px solid rgba(255,107,53,.3); color:var(--orange); }
+.st-exp { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12); color:var(--muted); text-decoration:line-through; }
+.app-foot { margin-top:16px; padding-top:14px; border-top:1px solid var(--border); font-size:.84rem; color:var(--muted); display:flex; gap:9px; align-items:flex-start; }
+.app-foot b { color:var(--text); font-weight:500; }
+
+/* ═══ FLUXOGRAMA ANIMADO — AULA 6 ═══ */
+.flowbox { display:flex; flex-direction:column; align-items:center; gap:6px; margin:10px 0 4px; }
+.flow-stage { display:flex; justify-content:center; width:100%;
+  opacity:0; animation:fpop .55s ease forwards; animation-delay:var(--d); }
+.flow-arrow-v { color:var(--muted); font-size:1.1rem; opacity:0;
+  animation:fpop .4s ease forwards; animation-delay:var(--d); display:flex; align-items:center; gap:10px; }
+.fbranch { font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); }
+@keyframes fpop { from{opacity:0; transform:translateY(-8px)} to{opacity:1; transform:translateY(0)} }
+
+.fnode { background:var(--card); border:1px solid var(--border); border-radius:12px;
+  padding:12px 18px; text-align:center; min-width:190px; max-width:340px; }
+.fnode .fn-k { font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:1.6px;
+  text-transform:uppercase; color:var(--muted); margin-bottom:5px; }
+.fnode .fn-t { font-family:'Syne',sans-serif; font-weight:700; font-size:.92rem; color:var(--text); }
+.fnode .fn-d { font-size:.75rem; color:var(--muted); margin-top:4px; line-height:1.45; }
+
+.fnode.ask { border-color:rgba(124,58,237,.45); background:rgba(124,58,237,.07); }
+.fnode.ask .fn-k { color:var(--pink); }
+.fnode.hub { border-color:var(--cyan); background:rgba(0,229,255,.07); }
+.fnode.hub .fn-k { color:var(--cyan); }
+.fnode.hub .fn-t { color:var(--cyan); }
+.fnode.leaf { min-width:0; padding:10px 14px; opacity:0; animation:fpop .5s ease forwards; animation-delay:var(--d); }
+.fnode.leaf .fn-t { font-size:.82rem; }
+.fnode.leaf .fn-d { font-size:.7rem; }
+.fnode.leaf.lock { border-color:rgba(0,255,136,.4); background:rgba(0,255,136,.05); }
+.fnode.leaf.lock .fn-k, .fnode.leaf.lock .fn-t { color:var(--green); }
+.fnode.gap { border-color:var(--orange); background:rgba(255,107,53,.07);
+  animation:fpulse 1.6s ease-in-out infinite; }
+.fnode.gap .fn-k, .fnode.gap .fn-t { color:var(--orange); }
+.fnode.gap .fn-t { font-size:1.4rem; letter-spacing:4px; }
+@keyframes fpulse { 0%,100%{box-shadow:0 0 0 0 rgba(255,107,53,.25)} 50%{box-shadow:0 0 0 10px rgba(255,107,53,0)} }
+
+.flow-fan { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; width:100%; }
+
+.replay { font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:1px;
+  border:1px solid var(--border); background:transparent; color:var(--muted);
+  border-radius:8px; padding:6px 16px; cursor:pointer; transition:.2s; }
+.replay:hover { border-color:var(--cyan); color:var(--cyan); }
+.flow-static .fnode, .flow-static .flow-stage { opacity:1 !important; animation:none !important; }
+.flowbox.rerun .flow-stage, .flowbox.rerun .flow-arrow-v, .flowbox.rerun .fnode.leaf { animation:none; opacity:1; }
+</style>
+
+</head>
+<body>
+
+<canvas id="bg"></canvas>
+<div id="progress-bar"></div>
+
+<div id="topbar">
+  <span class="tb-label">⬡ Aula 06 — SDD</span>
+  <span class="tb-title" id="slide-title-bar"></span>
+  <span class="tb-counter" id="slide-counter"></span>
+</div>
+
+<div id="nav-prev">←</div>
+<div id="nav-next">→</div>
+<div id="dots"></div>
+
+<div id="slides">
+<!-- ─── 0 ─── -->
+<div class="slide active" data-title="Abertura">
+<div class="slide-inner">
+  <div class="badge">SDD EM PROJETO EXISTENTE · AULA 6</div>
+  <h1 class="hero-title">O repositório<br>estava instruído.<br><span style="color:var(--orange)">Por que não<br>bastou?</span></h1>
+  <p class="lead" style="max-width:760px;">Semana passada vocês soltaram o agente no modo auto, num projeto que tinha AGENTS.md, ADRs e regras. E mesmo assim o resultado foi diferente em cada máquina.</p>
+  <div class="hero-q">💭 Não foi falta de instrução. Foi falta de <strong style="font-style:normal;color:var(--text)">controle</strong> — e é sobre isso que é a semana inteira.</div>
+</div>
+</div>
+
+<!-- ─── 1 ─── -->
+<div class="slide" data-title="Os três sintomas">
+<div class="slide-inner slide-scroll">
+  <span class="otag">o que deu errado, em uma página</span>
+  <h2 class="sec-title">Três sintomas,<br>uma causa</h2>
+
+  <div class="g3" style="margin-bottom:22px;">
+    <div class="card" style="border-color:rgba(255,107,53,.3)">
+      <span class="otag">sintoma 1</span>
+      <h3 class="slide-h3" style="font-size:1rem;">Sem limite de escopo</h3>
+      <p style="color:var(--muted);font-size:.84rem;line-height:1.6;">Mexeu em arquivo que ninguém pediu, criou pasta que não estava no plano, instalou dependência sem avisar.</p>
+    </div>
+    <div class="card" style="border-color:rgba(255,107,53,.3)">
+      <span class="otag">sintoma 2</span>
+      <h3 class="slide-h3" style="font-size:1rem;">Sem limite de autoridade</h3>
+      <p style="color:var(--muted);font-size:.84rem;line-height:1.6;"><strong style="color:var(--text)">Escreveu os próprios ADRs.</strong> Decidiu e carimbou a decisão. Documento que parece governança e não é.</p>
+    </div>
+    <div class="card" style="border-color:rgba(255,107,53,.3)">
+      <span class="otag">sintoma 3</span>
+      <h3 class="slide-h3" style="font-size:1rem;">Sem ponto de parada</h3>
+      <p style="color:var(--muted);font-size:.84rem;line-height:1.6;">Foi até achar que tinha acabado. Ninguém verificou nada no meio do caminho, porque não havia meio do caminho.</p>
+    </div>
+  </div>
+
+  <div class="hero-q" style="max-width:920px;">
+    🎯 O AGENTS.md e os ADRs dizem <strong style="font-style:normal;color:var(--text)">como se trabalha aqui</strong> e <strong style="font-style:normal;color:var(--text)">por que decidimos assim</strong>. Nenhum dos dois diz <strong style="font-style:normal;color:var(--orange)">o que fazer agora e até onde ir</strong>. Esse buraco tem nome, e a aula de hoje é sobre ele.
+  </div>
+</div>
+</div>
+
+<!-- ─── 2 ─── -->
+<div class="slide" data-title="O que veio no zip">
+<div class="slide-inner slide-scroll">
+  <span class="tag">projeto novo</span>
+  <h2 class="sec-title">O que vocês<br>receberam</h2>
+  <p class="lead">Um projeto <strong style="color:var(--text)">que já existe e já funciona</strong>: carrinho de compras com subtotal e frete, testes verdes, tela no ar. Descompacte e abra na sua ferramenta.</p>
+
+  <div class="code" style="margin-bottom:16px;">carrinho-descontos/
+├── <span class="h">AGENTS.md</span>              <span class="c">← como se trabalha aqui</span>
+├── README.md · .gitignore · requirements.txt
+├── app.py                 <span class="c">← API (FastAPI)</span>
+├── <span class="h">docs/</span>
+│   ├── PRD.md             <span class="c">← o que o negócio quer</span>
+│   ├── plan.md            <span class="c">← o plano do que JÁ foi entregue</span>
+│   ├── handoff.md         <span class="c">← onde o dev anterior parou</span>
+│   └── adr/               <span class="c">← 4 decisões + índice</span>
+├── <span class="h">rules/</span>
+│   ├── tests.md           <span class="c">← como escrever teste aqui</span>
+│   ├── checks.md          <span class="c">← definição de "pronto"</span>
+│   └── handoff.md         <span class="c">← formato do handoff</span>
+├── <span class="h">src/carrinho/</span>
+│   ├── dominio/           <span class="c">← regra de negócio, sem infra</span>
+│   └── adaptadores/       <span class="c">← repositório em memória</span>
+├── tests/                 <span class="c">← 9 testes, todos passando</span>
+└── static/index.html      <span class="c">← a tela (contrato fixo)</span></div>
+
+  <div class="bridge">
+    <p style="color:var(--muted);font-size:.88rem;line-height:1.7;">📌 Repare que o <code style="color:var(--cyan)">docs/handoff.md</code> chegou até vocês <strong style="color:var(--text)">apesar de estar no <code style="color:var(--cyan)">.gitignore</code></strong>. Ele não veio do repositório — veio junto, como o dev anterior teria mandado por mensagem. É exatamente o que a gente disse na aula 3: handoff é de sessão, não de repositório.</p>
+  </div>
+
+  <div class="code" style="margin-top:14px;"><span class="c"># confirme que está tudo de pé antes de seguir</span>
+pip install -r requirements.txt
+pytest
+uvicorn app:app --reload</div>
+</div>
+</div>
+
+<!-- ─── 3 ─── -->
+<div class="slide" data-title="Passo 1 — Onboarding">
+<div class="slide-inner slide-scroll">
+  <span class="stepnum">Passo 1</span>
+  <h2 class="sec-title">Você entrou<br>no time hoje</h2>
+  <p class="lead">A pessoa que escreveu esse código saiu de férias. Você nunca viu esse projeto. Comece do jeito que vocês aprenderam na aula 5 — um prompt, chat novo.</p>
+
+  <div class="promptbox">
+    <div class="promptbox-head"><span>prompt</span><button class="copybtn" onclick="cp(this)">copiar</button></div>
+    <pre>Leia @docs/handoff.md e me diga onde este projeto está.</pre>
+  </div>
+
+  <div class="expected">
+    <div class="ex-h">o que se espera ao final do passo 1</div>
+    <ul>
+      <li>Ele resume a fatia entregue e aponta o <strong>próximo passo: cupom de desconto</strong>.</li>
+      <li>Ele menciona que <strong>a spec ainda não existe</strong> e que não é para começar pelo código.</li>
+      <li>Nenhum arquivo criado, nenhuma linha escrita.</li>
+    </ul>
+  </div>
+
+  <div class="bridge" style="margin-top:16px;">
+    <p style="color:var(--muted);font-size:.88rem;line-height:1.7;">💡 Um arquivo de meia página, escrito por alguém que você nunca viu, e em trinta segundos você sabe onde o projeto está. <strong style="color:var(--text)">É para isso que serve o handoff</strong> — e é a primeira vez no curso que ele atravessa não uma semana, mas uma pessoa.</p>
+  </div>
+</div>
+</div>
+
+<!-- ─── 4 ─── -->
+<div class="slide" data-title="Passo 2 — Auditoria">
+<div class="slide-inner slide-scroll">
+  <span class="stepnum">Passo 2</span>
+  <h2 class="sec-title">Agora quem varre<br>é você</h2>
+  <p class="lead">Em duplas. Sem perguntar ao agente — todas as respostas estão no repositório, e a graça é descobrir <strong style="color:var(--text)">em qual arquivo</strong> cada uma mora.</p>
+
+  <div class="checklist">
+    <div class="chk" onclick="this.classList.toggle('on')"><span class="box"></span><span><strong>1.</strong> Em que unidade os valores monetários são guardados, e por quê?</span></div>
+    <div class="chk" onclick="this.classList.toggle('on')"><span class="box"></span><span><strong>2.</strong> A partir de qual valor o frete é grátis? O limite é inclusivo?</span></div>
+    <div class="chk" onclick="this.classList.toggle('on')"><span class="box"></span><span><strong>3.</strong> O total é guardado ou calculado? Qual foi o argumento do outro lado?</span></div>
+    <div class="chk" onclick="this.classList.toggle('on')"><span class="box"></span><span><strong>4.</strong> Um teste de regra de negócio pode usar o repositório em memória?</span></div>
+    <div class="chk" onclick="this.classList.toggle('on')"><span class="box"></span><span><strong>5.</strong> O que eu preciso rodar antes de dizer que terminei uma tarefa?</span></div>
+    <div class="chk" onclick="this.classList.toggle('on')"><span class="box"></span><span><strong>6.</strong> Qual caminho o dev anterior tentou e abandonou — e por quê?</span></div>
+    <div class="chk" onclick="this.classList.toggle('on')"><span class="box"></span><span><strong>7.</strong> Tem alguma coisa <strong>errada</strong> na pasta <code>docs/adr/</code>?</span></div>
+  </div>
+
+  <div class="warnbox">
+    <div class="wh">a pergunta por trás das sete</div>
+    <p>Anotem <strong>em que ordem</strong> vocês abriram os arquivos para responder. Daqui a pouco vamos comparar com a ordem que o agente segue sozinho.</p>
+  </div>
+</div>
+</div>
+
+<!-- ─── 5 ─── -->
+<div class="slide" data-title="O gabarito">
+<div class="slide-inner slide-scroll">
+  <span class="gtag">confiram</span>
+  <h2 class="sec-title">Onde cada resposta<br>estava</h2>
+
+  <div class="hsec"><div class="hn">1 · centavos</div><div class="ht">docs/adr/002 — valores em centavos, nunca float</div><div class="hd">E o ADR guarda o motivo que o código não guarda: o PRD proíbe divergência de centavo. A alternativa era <code>Decimal</code>, e o ADR diz por que perdeu.</div></div>
+
+  <div class="hsec"><div class="hn">2 · frete</div><div class="ht">docs/PRD.md + src/carrinho/dominio/frete.py</div><div class="hd">A partir de R$ 200,00. E o <strong style="color:var(--text)">inclusive</strong> só está escrito em dois lugares: no handoff (foi confirmado por e-mail com o Comercial) e no teste de borda. É o tipo de detalhe que some se ninguém registra.</div></div>
+
+  <div class="hsec"><div class="hn">3 · total</div><div class="ht">docs/adr/003 — sempre calculado</div><div class="hd">O outro lado era defensável: leitura mais barata e caminho para histórico. Perdeu porque campo derivado que se esquece de invalidar vira valor errado na tela do cliente.</div></div>
+
+  <div class="hsec"><div class="hn">4 e 5 · como trabalhar</div><div class="ht">rules/tests.md e rules/checks.md</div><div class="hd">Teste de domínio não toca infraestrutura. E "pronto" é: pytest passa, o servidor sobe, o endpoint responde. Os três, nessa ordem.</div></div>
+
+  <div class="hsec"><div class="hn">6 · o caminho abandonado</div><div class="ht">docs/handoff.md</div><div class="hd">O frete começou dentro de <code>Carrinho</code> e foi separado. Está escrito lá: <em>"não voltem atrás nisso"</em>. Sem essa linha, o próximo agente refaz o mesmo erro com entusiasmo.</div></div>
+
+  <div class="hsec star"><div class="hn">7 · o intruso</div><div class="ht">docs/adr/004 — "Frete grátis a partir de R$ 200,00"</div><div class="hd">Não é decisão do time: é <strong style="color:var(--text)">requisito do PRD</strong>. As "alternativas consideradas" — R$ 150, R$ 250 — nunca estiveram na mesa. Mesmo erro do ADR-003 da aula 5, e vocês pegaram mais rápido. Apaguem, e registrem o buraco no índice.</div></div>
+</div>
+</div>
+
+<!-- ─── 6 ─── -->
+<div class="slide" data-title="Sua missão">
+<div class="slide-inner slide-scroll">
+  <span class="ptag">a demanda</span>
+  <h2 class="sec-title">O que pediram<br>para você</h2>
+
+  <div class="hero-q" style="max-width:900px;margin-bottom:20px;">
+    📋 <strong style="font-style:normal;color:var(--text)">"O Marketing quer distribuir cupons de desconto nas campanhas. O cliente digita o código no carrinho e vê o desconto antes de fechar o pedido. Pode ser percentual ou valor fixo, e cada cupom tem uma validade."</strong>
+  </div>
+
+  <p class="lead">É o que está no PRD, e é tudo que você tem. A tela já foi desenhada com o campo de cupom, apontando para um endpoint que ainda não existe.</p>
+
+  <div class="g2">
+    <div class="card" style="border-color:rgba(0,255,136,.25)">
+      <span class="gtag">o critério de pronto</span>
+      <p style="color:var(--muted);font-size:.85rem;line-height:1.65;">Aplicar <code style="color:var(--cyan)">PROMO10</code> na tela para de mostrar o aviso laranja, e a <strong style="color:var(--text)">linha de desconto aparece no resumo</strong>. Binário: ou aparece, ou não.</p>
+    </div>
+    <div class="card" style="border-color:rgba(255,107,53,.25)">
+      <span class="otag">a armadilha</span>
+      <p style="color:var(--muted);font-size:.85rem;line-height:1.65;">Parece uma feature de uma tarde. <strong style="color:var(--text)">Conte quantas perguntas o PRD não responde</strong> antes de deixar alguém escrever a primeira linha.</p>
+    </div>
+  </div>
+
+  <div class="warnbox">
+    <div class="wh">ainda não</div>
+    <p>Não abra o agente para implementar. Antes disso falta uma coisa no repositório — e é a coisa que faltava semana passada.</p>
+  </div>
+</div>
+</div>
+
+<!-- ─── 7 ─── -->
+<div class="slide" data-title="Passo 3 — restrictions.md">
+<div class="slide-inner slide-scroll">
+  <span class="stepnum o">Passo 3</span>
+  <h2 class="sec-title">O arquivo que<br>faltava semana<br>passada</h2>
+  <p class="lead">O AGENTS.md diz o que fazer. Nada dizia <strong style="color:var(--text)">o que não fazer</strong>. Crie <code style="font-family:'IBM Plex Mono';color:var(--cyan)">rules/restrictions.md</code> com isto:</p>
+
+  <div class="filebox">
+    <div class="filebox-head"><span class="fb-path">rules/restrictions.md</span><button class="copybtn" onclick="cp(this)">copiar</button></div>
+    <pre># O que não fazer
+
+## Autoridade
+
+- Não escreva ADR. Se encontrar uma decisão que precisa de um, descreva a
+  decisão e as alternativas, e PARE. Quem decide é o time.
+- Não responda por conta própria o que o PRD deixou ambíguo. Liste as
+  perguntas e espere.
+
+## Escopo
+
+- Não altere arquivo fora do escopo da tarefa atual.
+- Não adicione dependência sem perguntar.
+- Não crie estrutura de pastas nova que não esteja no plano.
+- Não altere static/index.html. É contrato fixo.
+
+## Ritmo
+
+- Não escreva código antes de um plano aprovado. Escreva o plano em
+  docs/plan.md, mostre, e espere.
+- "Pode implementar" NÃO autoriza o plano inteiro: execute UMA tarefa,
+  rode rules/checks.md, mostre o resultado e pare.
+- Não relate sucesso parcial. Se um check falhou, a tarefa não terminou.</pre>
+  </div>
+
+  <div class="filebox">
+    <div class="filebox-head"><span class="fb-path">AGENTS.md · quarta linha em "Onde olhar"</span><button class="copybtn" onclick="cp(this)">copiar</button></div>
+    <pre>- rules/restrictions.md — leia sempre, antes de qualquer tarefa</pre>
+  </div>
+
+  <div class="expected">
+    <div class="ex-h">por que cada bloco existe</div>
+    <ul>
+      <li><strong>Autoridade</strong> — é o sintoma 2 de semana passada. Um agente que escreve o próprio ADR está registrando o palpite dele como decisão do time.</li>
+      <li><strong>Escopo</strong> — sintoma 1. Limita o raio de ação para que a revisão caiba na cabeça de uma pessoa.</li>
+      <li><strong>Ritmo</strong> — sintoma 3. Repare na segunda linha: ela antecipa <strong>a sua própria pressa</strong>. Daqui a pouco você vai querer dizer "pode ir", e o arquivo já sabe disso.</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<!-- ─── 8 ─── -->
+<div class="slide" data-title="O caminho que o agente percorre">
+<div class="slide-inner slide-scroll">
+  <span class="tag">antes de rodar, entenda</span>
+  <h2 class="sec-title">O caminho que<br>ele percorre</h2>
+  <p class="lead">Você vai escrever <strong style="color:var(--text)">uma frase</strong>, sem citar arquivo nenhum. Isto é o que acontece antes de qualquer resposta:</p>
+
+  <div class="flowbox">
+    <div class="flow-stage" style="--d:0s">
+      <div class="fnode ask">
+        <div class="fn-k">pergunta</div>
+        <div class="fn-t">"implemente o cupom de desconto"</div>
+      </div>
+    </div>
+
+    <div class="flow-arrow-v" style="--d:.5s">↓</div>
+
+    <div class="flow-stage" style="--d:.8s">
+      <div class="fnode hub">
+        <div class="fn-k">ponto de entrada</div>
+        <div class="fn-t">AGENTS.md</div>
+        <div class="fn-d">único arquivo que toda ferramenta carrega sozinha</div>
+      </div>
+    </div>
+
+    <div class="flow-arrow-v" style="--d:1.3s">↓ <span class="fbranch">e daqui ele se espalha</span></div>
+
+    <div class="flow-fan">
+      <div class="fnode leaf" style="--d:1.7s"><div class="fn-k">o que já foi feito</div><div class="fn-t">docs/handoff.md</div><div class="fn-d">onde o projeto está</div></div>
+      <div class="fnode leaf" style="--d:2.0s"><div class="fn-k">o quê</div><div class="fn-t">docs/PRD.md</div><div class="fn-d">as regras de negócio</div></div>
+      <div class="fnode leaf" style="--d:2.3s"><div class="fn-k">o porquê</div><div class="fn-t">docs/adr/</div><div class="fn-d">centavos, total calculado</div></div>
+      <div class="fnode leaf" style="--d:2.6s"><div class="fn-k">como</div><div class="fn-t">rules/tests.md</div><div class="fn-d">como testar aqui</div></div>
+      <div class="fnode leaf" style="--d:2.9s"><div class="fn-k">quando parar</div><div class="fn-t">rules/checks.md</div><div class="fn-d">definição de pronto</div></div>
+      <div class="fnode leaf lock" style="--d:3.2s"><div class="fn-k">até onde ir</div><div class="fn-t">rules/restrictions.md</div><div class="fn-d">o que não fazer</div></div>
+    </div>
+
+    <div class="flow-arrow-v" style="--d:3.6s">↓</div>
+
+    <div class="flow-stage" style="--d:3.9s">
+      <div class="fnode gap">
+        <div class="fn-k">e agora?</div>
+        <div class="fn-t">???</div>
+        <div class="fn-d">nenhum arquivo responde <strong>o que fazer primeiro</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:center;margin-top:14px;">
+    <button class="replay" onclick="replay(this)">▸ rodar de novo</button>
+  </div>
+</div>
+</div>
+
+<!-- ─── 9 ─── -->
+<div class="slide" data-title="A caixa vazia">
+<div class="slide-inner slide-scroll">
+  <span class="otag">o buraco</span>
+  <h2 class="sec-title">Cinco arquivos<br>respondem tudo,<br>menos uma coisa</h2>
+
+  <table class="tbl" style="margin-bottom:20px;">
+    <thead><tr><th>arquivo</th><th>pergunta que responde</th><th>desde</th></tr></thead>
+    <tbody>
+      <tr><td><strong>docs/PRD.md</strong></td><td>o que o negócio quer</td><td>aula 4</td></tr>
+      <tr><td><strong>docs/adr/</strong></td><td>por que decidimos assim</td><td>aula 4</td></tr>
+      <tr><td><strong>AGENTS.md</strong></td><td>como se trabalha aqui</td><td>aula 3</td></tr>
+      <tr><td><strong>rules/checks.md</strong></td><td>quando posso dizer que terminei</td><td>aula 4</td></tr>
+      <tr><td><strong>rules/restrictions.md</strong></td><td>até onde eu posso ir</td><td>hoje</td></tr>
+      <tr style="background:rgba(255,107,53,.05)"><td style="color:var(--orange)"><strong>???</strong></td><td style="color:var(--orange)"><strong>o que fazer agora, nesta ordem, e como sei que cada passo funcionou</strong></td><td style="color:var(--orange)">—</td></tr>
+    </tbody>
+  </table>
+
+  <div class="hero-q" style="max-width:920px;">
+    🎯 Esse é o buraco. Preencher ele é <strong style="font-style:normal;color:var(--text)">spec da funcionalidade</strong> — com critérios de aceitação verificáveis — <strong style="font-style:normal;color:var(--text)">e tarefas que cabem num commit</strong>. É pouca coisa nova em cima do que vocês já têm. E é ela que impede o modo auto de virar bagunça.
+  </div>
+</div>
+</div>
+
+<!-- ─── 10 ─── -->
+<div class="slide" data-title="Passo 4 — Uma frase">
+<div class="slide-inner slide-scroll">
+  <span class="stepnum p">Passo 4</span>
+  <h2 class="sec-title">Modo agent,<br>uma frase,<br>zero referências</h2>
+  <p class="lead">Sem <code style="font-family:'IBM Plex Mono';color:var(--cyan)">@arquivo</code>, sem explicar o projeto, sem dizer como testar. Se o repositório estiver certo, nada disso é necessário.</p>
+
+  <div class="promptbox">
+    <div class="promptbox-head"><span>prompt · modo agent</span><button class="copybtn" onclick="cp(this)">copiar</button></div>
+    <pre>Implemente o cupom de desconto.</pre>
+  </div>
+
+  <div class="expected">
+    <div class="ex-h">o que se espera ao final do passo 4</div>
+    <ul>
+      <li>Ele <strong>não escreve código</strong>. O <code>restrictions.md</code> impede.</li>
+      <li>Ele lê o repositório e mostra o caminho que percorreu — compare com a ordem que sua dupla usou na auditoria. <strong>É a mesma.</strong></li>
+      <li>Ele devolve uma <strong>lista de perguntas em aberto</strong> sobre o cupom, e <strong>para</strong>.</li>
+      <li>Nenhum arquivo criado. Sem as respostas, qualquer plano seria chute.</li>
+    </ul>
+  </div>
+
+  <div class="warnbox">
+    <div class="wh">se ele começar a codar mesmo assim</div>
+    <p>Duas causas possíveis: sua ferramenta não está carregando o <code>rules/restrictions.md</code> (confira o ponteiro do AGENTS.md), ou o modo agent da sua ferramenta ignora instrução de parada. <strong>Interrompa, e diga isso em voz alta:</strong> instrução não é garantia, é probabilidade. Por isso a verificação humana entre tarefas continua existindo.</p>
+  </div>
+</div>
+</div>
+
+<!-- ─── COMPARE AS PERGUNTAS ─── -->
+<div class="slide" data-title="Compare as perguntas">
+<div class="slide-inner slide-scroll">
+  <span class="otag">antes de responder qualquer coisa</span>
+  <h2 class="sec-title">Quantas perguntas<br>o seu agente fez?</h2>
+  <p class="lead">Peça o número de três ou quatro pessoas e anote no quadro. Sete. Oito. Onze. <strong style="color:var(--text)">Ninguém tem a mesma lista.</strong></p>
+
+  <div class="g2" style="margin-bottom:18px;">
+    <div class="card" style="border-color:rgba(0,255,136,.25)">
+      <span class="gtag">o que ele acha</span>
+      <p style="color:var(--muted);font-size:.85rem;line-height:1.65;">Ambiguidade que está <strong style="color:var(--text)">na cara do texto</strong>: o desconto incide sobre o frete? qual arredondamento? o que fazer se o desconto for maior que o subtotal? Ele lê o PRD com atenção e encontra os buracos literais.</p>
+    </div>
+    <div class="card" style="border-color:rgba(255,107,53,.25)">
+      <span class="otag">o que ele não acha</span>
+      <p style="color:var(--muted);font-size:.85rem;line-height:1.65;">Ambiguidade que depende de <strong style="color:var(--text)">conhecer o domínio e o comportamento do usuário</strong>. Pergunte à sala: alguém perguntou o que acontece com o cupom quando o cliente <strong style="color:var(--text)">remove um item</strong> depois de aplicar?</p>
+    </div>
+  </div>
+
+  <div class="hero-q" style="max-width:920px;">
+    🎯 Quase nunca alguém pergunta. E é um caso caro: aplicar <code style="font-style:normal">BLACK50</code>, remover o item de R$ 180 e ficar com um desconto maior que o carrinho. <strong style="font-style:normal;color:var(--text)">A lista de perguntas do agente é um ótimo ponto de partida e um péssimo checklist.</strong> É por isso que a spec é revisada por gente — e nenhuma ferramenta de SDD resolve isso, nem a da próxima aula.
+  </div>
+
+  <div class="warnbox">
+    <div class="wh">e se o agente de alguém não perguntou nada?</div>
+    <p>Acontece, e é material de aula: significa que ele decidiu tudo sozinho e ia enterrar as nove decisões dentro de <code>if</code>. Compare com a lista do vizinho na tela — é o mesmo contraste, visto pelo outro lado.</p>
+  </div>
+</div>
+</div>
+
+<!-- ─── BRIEFING ─── -->
+<div class="slide" data-title="Passo 5 — O briefing do negócio">
+<div class="slide-inner slide-scroll">
+  <span class="stepnum p">Passo 5</span>
+  <h2 class="sec-title">De onde saem<br>as respostas?</h2>
+  <p class="lead">Não saem do repositório — e nunca vão sair. Nenhum AGENTS.md, ADR ou regra produz a decisão de que o frete grátis é avaliado <em>antes</em> do desconto. Isso é conhecimento de negócio, e sai da cabeça de uma pessoa. <strong style="color:var(--text)">Hoje essa pessoa sou eu.</strong></p>
+
+  <div class="filebox">
+    <div class="filebox-head"><span class="fb-path">briefing do negócio · cupom de desconto</span><button class="copybtn" onclick="cp(this)">copiar</button></div>
+    <pre>Decisões do negócio para o cupom de desconto:
+
+1.  O desconto incide sobre o SUBTOTAL apenas. Frete nunca entra na
+    base de cálculo.
+2.  A faixa de frete grátis é avaliada sobre o subtotal ANTES do
+    desconto. Um cupom não pode fazer o cliente perder o frete grátis.
+3.  Um cupom por carrinho. Aplicar um novo substitui o anterior.
+4.  Dois tipos: percentual (ex: 10%) e valor fixo (ex: R$ 50,00).
+5.  Arredondamento: o desconto é truncado para baixo, em centavos.
+    10% de R$ 19,99 = R$ 1,99 (199 centavos), não R$ 2,00.
+6.  O desconto nunca deixa o subtotal negativo. Se for maior que o
+    subtotal, o desconto vale exatamente o subtotal.
+7.  Cupom expirado é recusado no momento da aplicação. O carrinho não
+    muda e o cliente vê o motivo.
+8.  Código inexistente é recusado do mesmo jeito.
+9.  Códigos são case-insensitive: "promo10" e "PROMO10" são o mesmo.
+10. A validade vale até o fim do último dia (23:59:59, fuso de
+    São Paulo).
+11. Cupom não pode ser aplicado em carrinho vazio. Recuse com o motivo.
+12. A validade é checada apenas no momento da aplicação. Se o cupom
+    vencer enquanto o cliente edita o carrinho, ele continua valendo
+    nesta versão.
+13. Alterar ou remover itens recalcula o desconto sobre o novo
+    subtotal. O cupom permanece aplicado.
+
+Catálogo desta versão (carga fixa, sem cadastro pela tela):
+    PROMO10   10%        válido até 2027-12-31
+    BLACK50   R$ 50,00   válido até 2027-12-31
+    EXPIRADO  20%        válido até 2025-01-01
+
+Qualquer ponto não coberto acima está fora de escopo desta versão.
+Registre na spec como "não decidido" e não implemente.</pre>
+  </div>
+
+  <div class="expected">
+    <div class="ex-h">por que isso funciona mesmo com perguntas diferentes</div>
+    <ul>
+      <li>Você <strong>não responde à lista</strong> de ninguém. Entrega o briefing inteiro, igual para a sala toda.</li>
+      <li>A última linha fecha o briefing por construção: <strong>o que não está aqui está fora de escopo</strong>. Você nunca fica sem resposta.</li>
+      <li>Input idêntico, spec idêntica. <strong>A convergência vem daqui</strong>, não de os agentes perguntarem a mesma coisa.</li>
+      <li>Repare no item 13: <strong>ninguém perguntou</strong>, e é um dos mais caros.</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<!-- ─── A SPEC ─── -->
+<div class="slide" data-title="Passo 5 — A spec vira arquivo">
+<div class="slide-inner slide-scroll">
+  <span class="stepnum p">Passo 5 · parte 2</span>
+  <h2 class="sec-title">Briefing colado<br>no chat morre<br>com a sessão</h2>
+  <p class="lead">Treze decisões acabaram de ser tomadas. Se ficarem só na conversa, some tudo quando você fechar a janela — e é contra tudo que a gente vem fazendo desde a aula 3. <strong style="color:var(--text)">Vira arquivo.</strong></p>
+
+  <div class="promptbox">
+    <div class="promptbox-head"><span>prompt · cole o briefing junto</span><button class="copybtn" onclick="cp(this)">copiar</button></div>
+    <pre>Escreva docs/spec/cupom-desconto.md juntando o que o PRD já dizia com
+as decisões do negócio abaixo. Inclua critérios de aceitação
+verificáveis e uma seção do que ficou fora de escopo.
+Não implemente nada.
+
+[cole aqui o briefing]</pre>
+  </div>
+
+  <div class="filebox">
+    <div class="filebox-head"><span class="fb-path">o esqueleto esperado · docs/spec/cupom-desconto.md</span><button class="copybtn" onclick="cp(this)">copiar</button></div>
+    <pre># Spec — Cupom de desconto
+
+## Objetivo
+Uma frase. O que o cliente consegue fazer que não conseguia antes.
+
+## Regras
+As decisões fechadas, numeradas. Sem ambiguidade, sem "provavelmente".
+
+## Critérios de aceitação
+Verificáveis, com números. Ex:
+- 10% sobre subtotal de R$ 19,99 resulta em desconto de 199 centavos
+- cupom de R$ 50,00 sobre subtotal de R$ 30,00 resulta em desconto
+  de 3000 centavos e total de 3000 + frete
+- subtotal de R$ 200,00 com 10% mantém frete grátis
+
+## Fora de escopo / não decidido
+O que foi perguntado e ficou de fora. Explicitamente.
+
+## Contrato afetado
+POST /carrinho/{id}/cupom — ver static/index.html</pre>
+  </div>
+
+  <div class="filebox">
+    <div class="filebox-head"><span class="fb-path">AGENTS.md · quinta linha em "Onde olhar"</span><button class="copybtn" onclick="cp(this)">copiar</button></div>
+    <pre>- docs/spec/ — o que cada funcionalidade faz e como sei que funcionou</pre>
+  </div>
+
+  <div class="expected">
+    <div class="ex-h">o que se espera ao final do passo 5</div>
+    <ul>
+      <li><code>docs/spec/cupom-desconto.md</code> criado, <strong>revisado por você</strong>.</li>
+      <li>Critérios de aceitação com <strong>números</strong>. "O desconto é calculado corretamente" não é critério.</li>
+      <li>Uma seção de fora de escopo — acúmulo de cupons, valor mínimo, restrição por categoria.</li>
+      <li>Se ele encontrou uma decisão estrutural nova, <strong>descreveu e parou</strong>. Não escreveu ADR (restrictions).</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<!-- ─── MAPA DOS ARTEFATOS ─── -->
+<div class="slide" data-title="Sete arquivos .md">
+<div class="slide-inner slide-scroll">
+  <span class="gtag">pausa para organizar</span>
+  <h2 class="sec-title">Agora são sete<br>arquivos markdown<br>no repositório</h2>
+  <p class="lead">A spec foi o último a nascer, e com ele a coleção fechou. Antes de seguir para o plano, vale parar trinta segundos e olhar o conjunto: cada um responde uma pergunta diferente, tem um dono diferente e vive por um tempo diferente.</p>
+
+  <table class="tbl" style="margin-bottom:20px;">
+    <thead><tr><th>arquivo</th><th>responde</th><th>quem escreve</th><th>escopo e validade</th></tr></thead>
+    <tbody>
+      <tr><td><strong>docs/PRD.md</strong></td><td>o que o negócio quer</td><td>negócio</td><td>o produto inteiro · anos</td></tr>
+      <tr style="background:rgba(0,255,136,.05)"><td><strong style="color:var(--green)">docs/spec/&lt;feature&gt;.md</strong> <span style="color:var(--green);font-size:.72rem">← novo</span></td><td><strong style="color:var(--text)">o que ESTA funcionalidade faz e como sei que funcionou</strong></td><td>eng + negócio</td><td>uma funcionalidade</td></tr>
+      <tr><td><strong>docs/adr/NNN-*.md</strong></td><td>por que decidimos assim</td><td>engenharia</td><td>permanente · append-only</td></tr>
+      <tr><td><strong>AGENTS.md</strong></td><td>como se trabalha aqui</td><td>engenharia</td><td>sempre carregado · meses</td></tr>
+      <tr><td><strong>rules/*.md</strong></td><td>como fazer X, especificamente</td><td>engenharia</td><td>sob demanda · meses</td></tr>
+      <tr><td><strong>docs/plan.md</strong></td><td>em que ordem fazer</td><td>agente, revisado</td><td>descartável</td></tr>
+      <tr><td><strong>docs/handoff.md</strong></td><td>onde eu parei</td><td>agente</td><td>sobrescrito · dias</td></tr>
+    </tbody>
+  </table>
+
+  <div class="hsec star"><div class="hn">confusão 1</div><div class="ht">PRD e spec não são a mesma coisa em tamanhos diferentes</div><div class="hd">O PRD descreve o produto e dura anos. A spec descreve uma funcionalidade e tem critério de aceitação verificável. <strong style="color:var(--text)">O PRD pode ser ambíguo — é da natureza dele. A spec não pode:</strong> ela é o lugar onde a ambiguidade morre.</div></div>
+
+  <div class="hsec star"><div class="hn">confusão 2</div><div class="ht">Spec e ADR falam da mesma feature, mas respondem coisas diferentes</div><div class="hd">Abram a spec que vocês acabaram de escrever: ela diz <em>o desconto trunca para baixo</em> — comportamento observável. Ela <strong style="color:var(--text)">não explica</strong> por que os valores são centavos inteiros e não <code>Decimal</code>; isso é o ADR-002, caminho escolhido. Uma spec frequentemente <strong style="color:var(--text)">gera</strong> um ADR. E quem escreve esse ADR é o time, não o agente.</div></div>
+
+  <div class="hsec star"><div class="hn">confusão 3</div><div class="ht">rules/ não é convenção genérica: é regra com gatilho</div><div class="hd"><code>tests.md</code> carrega quando se escreve teste. <code>checks.md</code>, quando se termina. <code>restrictions.md</code>, sempre. <strong style="color:var(--text)">Se você não consegue dizer quando o arquivo é lido, ele provavelmente pertence ao AGENTS.md.</strong></div></div>
+</div>
+</div>
+
+<!-- ─── 12 ─── -->
+<div class="slide" data-title="Passo 6 — Uma tarefa por vez">
+<div class="slide-inner slide-scroll">
+  <span class="stepnum">Passo 6</span>
+  <h2 class="sec-title">Agora sim,<br>uma tarefa<br>por vez</h2>
+  <p class="lead">Com a spec no repositório, o plano deixa de chutar: ele deriva de um arquivo, não de uma conversa. Revise antes de liberar — é mais barato corrigir plano que corrigir diff.</p>
+
+  <div class="promptbox">
+    <div class="promptbox-head"><span>prompt</span><button class="copybtn" onclick="cp(this)">copiar</button></div>
+    <pre>Atualize docs/plan.md com as tarefas para entregar
+@docs/spec/cupom-desconto.md.
+Cada tarefa precisa dizer como verificar que funcionou.
+Não implemente nada ainda.</pre>
+  </div>
+
+  <p style="color:var(--muted);font-size:.86rem;line-height:1.7;margin:4px 0 12px;">Revisado, libere <strong style="color:var(--text)">uma</strong>:</p>
+
+  <div class="promptbox">
+    <div class="promptbox-head"><span>prompt</span><button class="copybtn" onclick="cp(this)">copiar</button></div>
+    <pre>Execute a tarefa 1.</pre>
+  </div>
+
+  <div class="expected">
+    <div class="ex-h">o que se espera ao final do passo 6</div>
+    <ul>
+      <li>Ele para depois da tarefa 1, roda os checks e <strong>mostra o resultado</strong> — mesmo se você tiver dito "pode ir".</li>
+      <li>A tarefa 1 é <strong>domínio puro</strong>: a regra do desconto, testada sem API e sem repositório.</li>
+      <li>Os testes saem dos <strong>critérios de aceitação da spec</strong> — inclusive o de R$ 19,99 e o do frete grátis em R$ 200,00.</li>
+      <li>Os testes novos usam centavos explícitos e testam as bordas — inclusive o caso do arredondamento de R$ 19,99.</li>
+      <li>Um commit por tarefa. <code>git log</code> conta a história.</li>
+    </ul>
+  </div>
+
+  <div class="warnbox">
+    <div class="wh">o que revisar em cada parada</div>
+    <p>O domínio importou algo de infraestrutura? (ADR-001) · Apareceu <code>float</code> em algum lugar? (ADR-002) · O total virou campo guardado? (ADR-003) · O <code>static/index.html</code> foi tocado? (restrictions)</p>
+  </div>
+</div>
+</div>
+
+<!-- ─── ISSO FOI SDD ─── -->
+<div class="slide" data-title="Isso foi SDD">
+<div class="slide-inner slide-scroll">
+  <span class="gtag">o nome do que vocês fizeram</span>
+  <h2 class="sec-title">A caixa vazia<br>tem nome agora</h2>
+
+  <div class="flowbox flow-static" style="margin-bottom:18px;">
+    <div class="flow-fan" style="align-items:center;">
+      <div class="fnode gap" style="min-width:150px"><div class="fn-k">antes</div><div class="fn-t">???</div><div class="fn-d">o que fazer agora?</div></div>
+      <div class="flow-arrow" style="font-size:1.4rem;color:var(--muted)">→</div>
+      <div class="fnode leaf lock" style="min-width:240px"><div class="fn-k">agora</div><div class="fn-t">docs/spec/cupom-desconto.md</div><div class="fn-d">o que a feature faz e como sei que funcionou</div></div>
+    </div>
+  </div>
+
+  <p class="lead"><strong style="color:var(--text)">Spec-Driven Development.</strong> Ninguém digitou a palavra "spec" na tela até o passo 5, mas o ciclo inteiro aconteceu — e cada fase virou um arquivo do repositório, não uma mensagem no chat.</p>
+
+  <div class="hsec"><div class="hn">spec</div><div class="ht">docs/spec/cupom-desconto.md</div><div class="hd">A frase do PRD não era spec. Virou spec quando ganhou treze decisões fechadas e critérios de aceitação com número. <strong style="color:var(--text)">Spec não é documento longo — é ambiguidade resolvida.</strong></div></div>
+
+  <div class="hsec"><div class="hn">plan</div><div class="ht">docs/plan.md, revisado por você</div><div class="hd">Derivado da spec, respeitando os ADRs sem ninguém pedir — porque eles estavam escritos.</div></div>
+
+  <div class="hsec"><div class="hn">tasks</div><div class="ht">as etapas verificáveis, uma por commit</div><div class="hd">É a única peça realmente nova da aula. As outras vocês já tinham desde a aula 4.</div></div>
+
+  <div class="hsec ok"><div class="hn">o controle</div><div class="ht">rules/restrictions.md</div><div class="hd">É o que separa isso do modo auto de semana passada. Mesmo repositório instruído, mesmo agente — o que mudou foi ter limite de autoridade, de escopo e de ritmo por escrito.</div></div>
+
+  <div class="hero-q" style="max-width:920px;margin-top:16px;">
+    💭 E repare no que <strong style="font-style:normal;color:var(--text)">não</strong> foi automatizado: as treze decisões saíram de uma pessoa. SDD não tira o humano do processo — <strong style="font-style:normal;color:var(--text)">muda onde ele fica</strong>. Antes ele revisava o diff no fim; agora ele decide na frente, e o diff vira consequência.
+  </div>
+</div>
+</div>
+
+<!-- ─── PROXIMA AULA ─── -->
+<div class="slide" data-title="Próxima aula">
+<div class="slide-inner slide-scroll">
+  <span class="ptag">o que vem por aí</span>
+  <h2 class="sec-title">Hoje foi<br>brownfield</h2>
+
+  <div class="g2" style="margin-bottom:18px;">
+    <div class="card" style="border-color:rgba(0,229,255,.3)">
+      <span class="tag">brownfield · hoje</span>
+      <p style="color:var(--muted);font-size:.86rem;line-height:1.65;">Projeto que <strong style="color:var(--text)">já existe</strong>: código rodando, decisões tomadas, convenções escritas. A spec precisa respeitar tudo isso. É o caso difícil — e é o que vocês vão encontrar na segunda-feira.</p>
+    </div>
+    <div class="card" style="border-color:rgba(0,255,136,.3)">
+      <span class="gtag">greenfield · próxima</span>
+      <p style="color:var(--muted);font-size:.86rem;line-height:1.65;">Terreno limpo. <strong style="color:var(--text)">Repositório vazio</strong>, nenhum arquivo de referência, nada a respeitar. Um webapp do zero — e ainda <strong style="color:var(--text)">sem framework nenhum</strong>, com o método que vocês já sabem.</p>
+    </div>
+  </div>
+
+  <div class="hero-q" style="max-width:920px;margin-bottom:18px;">
+    💭 Levem a pergunta pronta: hoje vocês receberam AGENTS.md, ADRs e regras <strong style="font-style:normal;color:var(--text)">prontos</strong>. Na próxima aula não existe nada disso. <strong style="font-style:normal;color:var(--orange)">Por onde começa?</strong> Dá para escrever AGENTS.md antes de saber a stack? Dá para escrever ADR antes de existir código? Vocês já têm as duas respostas — só nunca precisaram usá-las num repositório vazio.
+  </div>
+
+  <span class="tag">e depois</span>
+  <h3 class="slide-h3" style="margin-bottom:12px;">A semana seguinte é de comparação</h3>
+  <p style="color:var(--muted);font-size:.87rem;line-height:1.7;margin-bottom:14px;">Com o método na mão, aí sim entram os frameworks — e vocês vão ter com o que comparar. <strong style="color:var(--text)">spec-kit</strong> (GitHub, open source, roda em ~30 agentes: Copilot, Claude, Cursor, Codex, Windsurf, Gemini) e <strong style="color:var(--text)">Kiro</strong> (AWS, IDE própria, que boa parte de vocês já usa no trabalho).</p>
+
+  <div class="g3">
+    <div class="card"><span class="tag">à mão</span><p style="color:var(--muted);font-size:.82rem;line-height:1.6;">Total controle do formato. Nada a instalar. Custa disciplina — e num time de dez, disciplina não escala sozinha.</p></div>
+    <div class="card"><span class="tag">spec-kit</span><p style="color:var(--muted);font-size:.82rem;line-height:1.6;">Automatiza o ciclo: <code style="color:var(--cyan)">constitution</code>, <code style="color:var(--cyan)">specify</code>, <code style="color:var(--cyan)">clarify</code>, <code style="color:var(--cyan)">plan</code>, <code style="color:var(--cyan)">tasks</code>, <code style="color:var(--cyan)">implement</code>. Roda em qualquer harness.</p></div>
+    <div class="card"><span class="tag">kiro</span><p style="color:var(--muted);font-size:.82rem;line-height:1.6;">Requirements, design e tasks dentro da IDE, com hooks disparados por evento de arquivo. Fluxo fechado, integração forte.</p></div>
+  </div>
+
+  <div class="bridge" style="margin-top:16px;">
+    <p style="color:var(--muted);font-size:.87rem;line-height:1.7;">🎯 E a comparação não vai ser "qual é o melhor". Vão ser quatro perguntas de adoção: <strong style="color:var(--text)">onde mora o "porquê"</strong> em cada um · o que acontece com os artefatos quando o time <strong style="color:var(--text)">troca de ferramenta</strong> · quanto do fluxo é <strong style="color:var(--text)">ajustável</strong> ao processo de vocês · e o que o framework faz que vocês <strong style="color:var(--text)">não conseguiriam fazer à mão</strong>. Guardem essa última: hoje vocês fizeram à mão, então já sabem responder metade dela.</p>
+  </div>
+</div>
+</div>
+
+<!-- ─── 15 ─── -->
+<div class="slide" data-title="Checklist">
+<div class="slide-inner slide-scroll">
+  <span class="gtag">antes de sair</span>
+  <h2 class="sec-title">Confira</h2>
+
+  <div class="checklist">
+    <div class="chk" onclick="this.classList.toggle('on')"><span class="box"></span><span><code>pytest</code> verde, com os testes novos do desconto</span></div>
+    <div class="chk" onclick="this.classList.toggle('on')"><span class="box"></span><span><code>rules/restrictions.md</code> criado e citado no <strong>AGENTS.md</strong></span></div>
+    <div class="chk" onclick="this.classList.toggle('on')"><span class="box"></span><span>ADR-004 removido e o <strong>índice</strong> explicando o buraco</span></div>
+    <div class="chk" onclick="this.classList.toggle('on')"><span class="box"></span><span><code>docs/spec/cupom-desconto.md</code> criado, com critérios <strong>numéricos</strong></span></div>
+    <div class="chk" onclick="this.classList.toggle('on')"><span class="box"></span><span><code>docs/plan.md</code> com as tarefas do cupom, revisado por mim</span></div>
+    <div class="chk" onclick="this.classList.toggle('on')"><span class="box"></span><span>O agente <strong>parou</strong> depois da tarefa 1, mesmo com "pode ir"</span></div>
+    <div class="chk" onclick="this.classList.toggle('on')"><span class="box"></span><span>Domínio sem <code>float</code> e sem import de infraestrutura</span></div>
+    <div class="chk" onclick="this.classList.toggle('on')"><span class="box"></span><span>AGENTS.md apontando para <code>rules/restrictions.md</code> e <code>docs/spec/</code></span></div>
+    <div class="chk" onclick="this.classList.toggle('on')"><span class="box"></span><span><code>static/index.html</code> <strong>intocado</strong></span></div>
+    <div class="chk" onclick="this.classList.toggle('on')"><span class="box"></span><span>Handoff gerado com o formato de <code>rules/handoff.md</code></span></div>
+  </div>
+
+  <div class="promptbox" style="margin-top:18px;">
+    <div class="promptbox-head"><span>prompt · para terminar em casa</span><button class="copybtn" onclick="cp(this)">copiar</button></div>
+    <pre>Gere o handoff desta sessão.</pre>
+  </div>
+
+  <div class="expected">
+    <div class="ex-h">a feature termina em casa</div>
+    <ul>
+      <li>Continue tarefa por tarefa, rodando os checks entre elas.</li>
+      <li>Acabou quando o aviso laranja some da tela e a <strong>linha de desconto aparece no resumo</strong>.</li>
+      <li>Teste os três cupons: <code>PROMO10</code>, <code>BLACK50</code> e <code>EXPIRADO</code>.</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+</div><!-- /slides -->
+
+<script>
+// ══════════════════════════ BG CANVAS ══════════════════════════
+const bgCanvas = document.getElementById('bg');
+const bgCtx = bgCanvas.getContext('2d');
+let BW, BH, nodes = [];
+function resizeBg() { BW = bgCanvas.width = window.innerWidth; BH = bgCanvas.height = window.innerHeight; }
+resizeBg(); window.addEventListener('resize', () => { resizeBg(); initNodes(); });
+function initNodes() {
+  nodes = [];
+  const n = Math.floor((BW * BH) / 18000);
+  for (let i = 0; i < n; i++) nodes.push({ x:Math.random()*BW, y:Math.random()*BH, vx:(Math.random()-.5)*.4, vy:(Math.random()-.5)*.4, r:Math.random()*2+1 });
+}
+initNodes();
+function drawBg() {
+  bgCtx.clearRect(0, 0, BW, BH);
+  nodes.forEach(n => { n.x += n.vx; n.y += n.vy; if(n.x<0||n.x>BW)n.vx*=-1; if(n.y<0||n.y>BH)n.vy*=-1; });
+  for (let i = 0; i < nodes.length; i++) for (let j = i+1; j < nodes.length; j++) {
+    const dx=nodes[i].x-nodes[j].x, dy=nodes[i].y-nodes[j].y, d=Math.sqrt(dx*dx+dy*dy);
+    if (d < 120) { bgCtx.beginPath(); bgCtx.moveTo(nodes[i].x,nodes[i].y); bgCtx.lineTo(nodes[j].x,nodes[j].y); bgCtx.strokeStyle=`rgba(124,58,237,${.15*(1-d/120)})`; bgCtx.lineWidth=.5; bgCtx.stroke(); }
+  }
+  nodes.forEach(n => { bgCtx.beginPath(); bgCtx.arc(n.x,n.y,n.r,0,Math.PI*2); bgCtx.fillStyle='rgba(0,229,255,.5)'; bgCtx.fill(); });
+  requestAnimationFrame(drawBg);
+}
+drawBg();
+
+// ══════════════════════════ SLIDE ENGINE ══════════════════════════
+const slideEls = Array.from(document.querySelectorAll('.slide'));
+const TOTAL = slideEls.length;
+let current = 0;
+
+const progressBar = document.getElementById('progress-bar');
+const counter     = document.getElementById('slide-counter');
+const titleBar    = document.getElementById('slide-title-bar');
+const navPrev     = document.getElementById('nav-prev');
+const navNext     = document.getElementById('nav-next');
+const dotsEl      = document.getElementById('dots');
+
+slideEls.forEach((_, i) => {
+  const d = document.createElement('div'); d.className = 'dot'; d.onclick = () => goTo(i);
+  dotsEl.appendChild(d);
+});
+
+function goTo(n) {
+  if (n < 0 || n >= TOTAL) return;
+  slideEls.forEach((s, i) => {
+    s.classList.remove('active', 'prev');
+    if (i < n) s.classList.add('prev');
+  });
+  slideEls[n].classList.add('active');
+  current = n;
+  updateUI();
+}
+
+function updateUI() {
+  progressBar.style.width = ((current + 1) / TOTAL * 100) + '%';
+  counter.textContent = `${current + 1} / ${TOTAL}`;
+  titleBar.textContent = slideEls[current].dataset.title || '';
+  navPrev.classList.toggle('disabled', current === 0);
+  navNext.classList.toggle('disabled', current === TOTAL - 1);
+  document.querySelectorAll('.dot').forEach((d,i) => d.classList.toggle('active', i === current));
+}
+
+navPrev.onclick = () => goTo(current - 1);
+navNext.onclick = () => goTo(current + 1);
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') goTo(current + 1);
+  if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   goTo(current - 1);
+});
+requestAnimationFrame(() => goTo(0));
+
+// ══════════════════════════ COPIAR ══════════════════════════
+function cp(btn) {
+  const box = btn.closest('.filebox, .promptbox');
+  const txt = box.querySelector('pre').innerText;
+  navigator.clipboard.writeText(txt).then(() => {
+    btn.textContent = 'copiado ✓'; btn.classList.add('done');
+    setTimeout(() => { btn.textContent = 'copiar'; btn.classList.remove('done'); }, 1800);
+  }).catch(() => { btn.textContent = 'erro'; setTimeout(() => btn.textContent = 'copiar', 1500); });
+}
+
+// ══════════════════════════ FLUXOGRAMA ══════════════════════════
+function replay(btn) {
+  const box = btn.closest('.slide-inner').querySelector('.flowbox');
+  const clone = box.cloneNode(true);
+  box.replaceWith(clone);
+}
+</script>
+</body>
+</html>

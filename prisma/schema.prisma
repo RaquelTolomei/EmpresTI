@@ -4,8 +4,6 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 }
 
 enum Role {
@@ -79,6 +77,7 @@ model Equipment {
   name            String
   category        EquipmentCategory
   patrimonyCode   String            @map("patrimony_code")
+  imagePath       String?           @map("image_path")
   serialNumber    String?           @map("serial_number")
   location        String?
   status          EquipmentStatus   @default(AVAILABLE)

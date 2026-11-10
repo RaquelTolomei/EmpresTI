@@ -1,5 +1,5 @@
 ---
-name: skills
+name: fluxo-desenvolvimento
 description: "Use when planning, implementing, testing, or reviewing EmpresTI features. Covers the project workflow, architecture constraints, business rules, UI conventions, and required validation."
 ---
 
@@ -9,19 +9,19 @@ Use este skill para mudanças no sistema de empréstimo de equipamentos internos
 
 ## Antes de começar
 
-1. Leia [`rules/restrictions.md`](../rules/restrictions.md) e as instruções aplicáveis em [`AGENTS.md`](../AGENTS.md).
-2. Consulte [`docs/PRD.md`](../docs/PRD.md) para o objetivo, os atores e as regras de negócio.
-3. Consulte [`docs/adr/001-stack.md`](../docs/adr/001-stack.md) e os demais ADRs pertinentes antes de escolher tecnologias ou padrões.
+1. Leia [`rules/restrictions.md`](../../rules/restrictions.md) e as instruções aplicáveis em [`AGENTS.md`](../../AGENTS.md).
+2. Consulte [`docs/PRD.md`](../../docs/PRD.md) para o objetivo, os atores e as regras de negócio.
+3. Consulte [`docs/adr/001-stack.md`](../../docs/adr/001-stack.md) e os demais ADRs pertinentes antes de escolher tecnologias ou padrões.
 4. Para uma funcionalidade, localize a spec correspondente em `docs/specs/`. Leia `spec.md`, `plan.md` e `tasks.md`; a spec prevalece sobre o código quando houver divergência.
-5. Para alterações de interface, siga [`layout.md`](../layout.md), o design system Nocturne e as regras de acessibilidade e responsividade já especificadas.
+5. Para alterações de interface, siga [`layout.md`](../../layout.md), o design system Nocturne e as regras de acessibilidade e responsividade já especificadas.
 6. Leia os arquivos relevantes e verifique o estado do Git. Preserve mudanças preexistentes e não amplie o escopo.
 
 ## Planeje antes de implementar
 
 - Não implemente funcionalidade do produto sem uma spec correspondente, um plano aprovado e uma tarefa atual identificada.
-- Se a tarefa iniciar uma funcionalidade nova, siga [`rules/spec-flow.md`](../rules/spec-flow.md): identifique ambiguidades do PRD e aguarde respostas antes de escrever a spec.
+- Se a tarefa iniciar uma funcionalidade nova, siga [`rules/spec-flow.md`](../../rules/spec-flow.md): identifique ambiguidades do PRD e aguarde respostas antes de escrever a spec.
 - Se um comportamento necessário não estiver definido, pergunte em vez de inventar uma regra.
-- Execute uma tarefa por vez. Ao concluí-la, rode os checks pertinentes, relate o resultado e pare antes da próxima tarefa.
+- Execute uma tarefa por vez. Ao concluí-la, rode os checks pertinentes em [`rules/checks.md`](../../rules/checks.md), relate o resultado e pare antes da próxima tarefa.
 - Não altere o PRD, não escreva ADRs e não escolha bibliotecas fora do ADR-001. Se uma decisão exigir mudar um ADR, apresente alternativas e aguarde.
 
 ## Restrições técnicas
@@ -61,7 +61,7 @@ Use este skill para mudanças no sistema de empréstimo de equipamentos internos
 - Testes de integração usam PostgreSQL local/Testcontainers; não use o banco remoto e não faça mock do Prisma nos testes de integração.
 - Teste procedimentos com `createCaller` e inclua isolamento de tenant em cada procedimento que acessa dados.
 - Nomeie testes com o critério de aceite correspondente, por exemplo `test_ca_03_*`; endpoints devem validar status e corpo.
-- Siga [`rules/tests.md`](../rules/tests.md) ao criar ou alterar testes.
+- Siga [`rules/tests.md`](../../rules/tests.md) ao criar ou alterar testes.
 - Execute os checks aplicáveis à tarefa, usando os scripts existentes:
 
 ```text
@@ -79,5 +79,5 @@ npm run build
 
 - Revise o diff e confirme que apenas arquivos do escopo foram alterados.
 - Não faça push para a branch de produção, deploy ou alterações na configuração da Vercel.
-- Ao terminar uma tarefa do plano, atualize `handoff.md` conforme [`rules/handoff.md`](../rules/handoff.md).
+- Ao terminar uma tarefa do plano, atualize `handoff.md` conforme [`rules/handoff.md`](../../rules/handoff.md).
 - Resuma o que foi alterado e os resultados reais dos checks executados.

@@ -1,8 +1,9 @@
 # Handoff
 
-- Onde parei: T1 concluída e T2 iniciada com schema do banco e migração aplicados no ambiente real.
-- Commit e branch: commit realizado em `main` com mensagem `feat: add Prisma schema and DB migration for equipment lending`.
-- Banco local/real: schema sincronizado com o banco Supabase configurado no projeto via Prisma.
-- Publicado: nada.
-- Não fazer na próxima sessão: mexer no banco sem validar o schema; não seguir para autenticação antes de confirmar a base de dados e os serviços.
-- Próximo passo: implementar o seed e os services de domínio (tenant, cadastro de equipamento e empréstimo) e validar com testes focados.
+1. Onde parei: T2 preparada com validação Zod, singleton Prisma, clientes Supabase SSR/browser e base tRPC. A autenticação e o catálogo ainda não foram implementados.
+2. Commit e branch: `818970a` na branch `main`; alterações atuais não commitadas.
+3. Banco local: nenhum PostgreSQL local disponível; migrations e seed não foram executados. O `.env` atual aponta para um banco remoto; não conectar nem executar seed com ele.
+4. Publicação: nada foi publicado; nenhum acesso ou alteração remota foi feito.
+5. Não fazer: não usar o banco Supabase remoto; os valores Supabase adicionados ao `.env` são placeholders e precisam ser configurados antes de testar autenticação.
+6. Checks T2: `npm test`, `npm run typecheck`, `npm run lint` e `npm run build` passaram; formatação focada passou. `npm run format:check` falha somente em `tests/prova-subagente.test.ts`, arquivo preexistente fora do escopo.
+7. Próximo passo: configure PostgreSQL local, valide/aplique as migrations existentes e continue as tarefas pendentes de sessão/autorização antes do login e catálogo.
