@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { trpc } from "@/lib/trpc";
+import { getEquipmentImageUrl } from "@/lib/supabase/storage";
 
 export default function EquipmentDetailPage() {
   const params = useParams<{ patrimonio: string }>();
@@ -29,6 +30,7 @@ export default function EquipmentDetailPage() {
       </AppShell>
     );
   const equipment = detail.data;
+  const imageUrl = getEquipmentImageUrl(equipment.imagePath);
   return (
     <AppShell>
       <header className="mb-8">
@@ -36,6 +38,16 @@ export default function EquipmentDetailPage() {
         <h1 className="mt-2 text-3xl font-semibold">{equipment.name}</h1>
       </header>
       <section className="max-w-xl rounded-xl border border-[#1F2949] bg-[#0E1530] p-6">
+        {imageUrl ? (
+          <div
+            aria-label={`Imagem de ${equipment.name}`}
+            className="mb-6 aspect-[4/3] rounded-lg bg-[#111A38] bg-cover bg-center"
+            role="img"
+            style={{
+              backgroundImage: `url("${imageUrl}")`,
+            }}
+          />
+        ) : null}
         <dl className="grid gap-4 text-sm">
           <div>
             <dt className="text-[#7C86A2]">Categoria</dt>

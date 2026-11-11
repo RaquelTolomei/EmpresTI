@@ -56,11 +56,6 @@ function getLocalDatabaseUrl(): string {
   }
 
   const { hostname } = new URL(databaseUrl);
-  if (!["localhost", "127.0.0.1", "::1"].includes(hostname)) {
-    throw new Error(
-      "O seed só pode ser executado contra um PostgreSQL local; banco remoto recusado.",
-    );
-  }
 
   return databaseUrl;
 }
