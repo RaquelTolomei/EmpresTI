@@ -1,9 +1,9 @@
 # Handoff
 
-1. Onde parei: T2 preparada com validação Zod, singleton Prisma, clientes Supabase SSR/browser e base tRPC. A autenticação e o catálogo ainda não foram implementados.
-2. Commit e branch: `818970a` na branch `main`; alterações atuais não commitadas.
-3. Banco local: nenhum PostgreSQL local disponível; migrations e seed não foram executados. O `.env` atual aponta para um banco remoto; não conectar nem executar seed com ele.
+1. Onde parei: T5–T15 implementadas no núcleo, routers tRPC e telas principais; T16–T18 ainda precisam de revisão/testes específicos.
+2. Commit e branch: `c208fd3` na branch `main`; alterações atuais não commitadas.
+3. Banco local: nenhuma migration foi aplicada; não há PostgreSQL local disponível nesta sessão.
 4. Publicação: nada foi publicado; nenhum acesso ou alteração remota foi feito.
-5. Não fazer: não usar o banco Supabase remoto; os valores Supabase adicionados ao `.env` são placeholders e precisam ser configurados antes de testar autenticação.
-6. Checks T2: `npm test`, `npm run typecheck`, `npm run lint` e `npm run build` passaram; formatação focada passou. `npm run format:check` falha somente em `tests/prova-subagente.test.ts`, arquivo preexistente fora do escopo.
-7. Próximo passo: configure PostgreSQL local, valide/aplique as migrations existentes e continue as tarefas pendentes de sessão/autorização antes do login e catálogo.
+5. Não fazer: não executar `migration.sql` contra o Supabase remoto; aplicar somente em PostgreSQL local após revisar a conexão.
+6. Checks: typecheck, lint e build passaram; Vitest passou com 4 testes e 1 falha esperada preexistente. Build avisa que `middleware` será substituído por `proxy`.
+7. Próximo passo: aplicar migrations e seed em PostgreSQL local e adicionar os testes de services, procedures, componentes e E2E.

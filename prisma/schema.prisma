@@ -23,9 +23,8 @@ enum EquipmentCategory {
 
 enum EquipmentStatus {
   AVAILABLE
-  LOANED
   MAINTENANCE
-  OUT_OF_SERVICE
+  RETIRED
 }
 
 enum LoanStatus {
@@ -92,7 +91,6 @@ model Equipment {
   auditEvents AuditEvent[]
 
   @@unique([tenantId, patrimonyCode])
-  @@unique([tenantId, serialNumber])
   @@index([tenantId, status])
   @@index([tenantId, category])
   @@index([tenantId, location])

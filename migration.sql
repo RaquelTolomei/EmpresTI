@@ -1,0 +1,5 @@
+-- Execute manually from the repository root:
+-- npx prisma migrate deploy
+--
+-- This applies the versioned migration:
+-- prisma/migrations/20261110_align_equipment_status/migration.sql

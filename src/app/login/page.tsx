@@ -1,4 +1,34 @@
+"use client";
+
+import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+
 export default function LoginPage() {
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLoading(true);
+    setError(null);
+    const form = new FormData(event.currentTarget);
+    const supabase = createSupabaseBrowserClient();
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: String(form.get("email")),
+      password: String(form.get("password")),
+    });
+    if (signInError) {
+      setError("E-mail ou senha inválidos.");
+      setLoading(false);
+      return;
+    }
+    const next = new URLSearchParams(window.location.search).get("next");
+    router.replace(next || "/catalogo");
+    router.refresh();
+  }
+
   return (
     <main
       className="grid min-h-screen bg-[#080C1A] text-[#E6EAF6] xl:grid-cols-[560px_minmax(0,1fr)]"
@@ -81,7 +111,7 @@ export default function LoginPage() {
             </p>
           </header>
 
-          <div className="flex flex-col gap-[18px]">
+          <form className="flex flex-col gap-[18px]" onSubmit={handleSubmit}>
             <label className="flex flex-col gap-2 text-xs text-[#9AA3BC]">
               E-mail
               <input
@@ -106,7 +136,8 @@ export default function LoginPage() {
 
             <button
               className="flex h-11 items-center justify-center gap-2 rounded-lg border border-[#5B7FE0] bg-transparent px-5 text-[13px] font-semibold text-[#B4C6F6] transition-colors hover:border-[#8AA6EE] hover:text-[#EEF2FE] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8AA6EE]"
-              type="button"
+              disabled={loading}
+              type="submit"
             >
               Entrar
               <svg
@@ -124,7 +155,12 @@ export default function LoginPage() {
                 />
               </svg>
             </button>
-          </div>
+            {error ? (
+              <p className="text-xs text-[#F0A0A5]" role="alert">
+                {error}
+              </p>
+            ) : null}
+          </form>
 
           <div
             className="h-px w-full"
